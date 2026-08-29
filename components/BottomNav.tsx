@@ -16,7 +16,7 @@ export default function BottomNav({ unreadChats = 0 }: { unreadChats?: number })
   const pathname = usePathname();
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-10 mx-auto flex h-16 w-full max-w-sm border-t-2 border-border bg-background">
+    <nav className="fixed inset-x-0 bottom-0 z-10 flex h-16 w-full border-t-2 border-border bg-background">
       {LINKS.map(({ href, label, icon: Icon }) => {
         const active = pathname?.startsWith(href);
         const isMap = href === "/map";

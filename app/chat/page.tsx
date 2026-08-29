@@ -60,7 +60,7 @@ export default async function ChatListPage() {
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-sm flex-col px-4 pt-12 pb-24">
+    <main className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col px-4 pt-12 pb-24">
       <header className="flex items-center justify-between border-b-2 border-border pb-4">
         <h1 className="font-heading text-2xl">Chats</h1>
         <Link

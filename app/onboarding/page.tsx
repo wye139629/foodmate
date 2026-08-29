@@ -308,6 +308,18 @@ function OnboardingContent() {
     };
   }, []);
 
+  useEffect(() => {
+    const supabase = createClient();
+    void supabase.auth.getUser().then(({ data }) => {
+      if (data.user?.user_metadata?.onboarded === true) {
+        const nextPath = searchParams.get("redirectedFrom");
+        router.replace(
+          nextPath && nextPath !== "/onboarding" ? nextPath : "/map",
+        );
+      }
+    });
+  }, [router, searchParams]);
+
   function handleBack() {
     if (advanceTimer.current !== null) {
       window.clearTimeout(advanceTimer.current);
