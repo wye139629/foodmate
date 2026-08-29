@@ -1,5 +1,6 @@
 import Link from "next/link";
 import MapView from "@/components/MapView";
+import BottomNav from "@/components/BottomNav";
 import { createServerSupabaseClient } from "@/lib/supabase-auth";
 
 export default async function MapPage() {
@@ -21,7 +22,10 @@ export default async function MapPage() {
           {initial}
         </Link>
       </header>
-      <MapView />
+      <MapView currentUserId={user?.id ?? null} />
+      {/* ponytail: unread count is a placeholder until FR-004 chat data is
+          wired in - matches the same placeholder value used on /board */}
+      <BottomNav unreadChats={1} />
     </main>
   );
 }

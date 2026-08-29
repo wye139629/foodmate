@@ -25,16 +25,10 @@ interface Listing {
 const RADIUS_OPTIONS = [5, 10, 25, 50];
 
 // Small deterministic "scattered photo" rotation per marker, keyed off the
-// listing id so it doesn't jump around on re-render.
-const MARKER_ROTATIONS = [
-  "rotate-3",
-  "-rotate-2",
-  "rotate-2",
-  "-rotate-3",
-  "rotate-1",
-  "-rotate-1",
-];
-function rotationFor(id: string): string {
+// listing id so it doesn't jump around on re-render. Degrees, not Tailwind
+// classes, so the count badge can counter-rotate to stay upright.
+const MARKER_ROTATIONS = [-6, -3, 3, 6, -4, 4];
+function rotationFor(id: string): number {
   let hash = 0;
   for (let i = 0; i < id.length; i++) hash = hash * 31 + id.charCodeAt(i);
   return MARKER_ROTATIONS[Math.abs(hash) % MARKER_ROTATIONS.length];
@@ -60,7 +54,11 @@ function groupByCoordinate(listings: Listing[]): Listing[][] {
   return Array.from(groups.values());
 }
 
-export default function MapView() {
+export default function MapView({
+  currentUserId,
+}: {
+  currentUserId: string | null;
+}) {
   const mapDivRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
@@ -151,11 +149,26 @@ export default function MapView() {
 
     markersRef.current = groupByCoordinate(listings).map((group) => {
       const first = group[0];
+      const rotation = rotationFor(first.id);
+      const isOwn = group.some((listing) => listing.owner_id === currentUserId);
+
       const el = document.createElement("div");
-      el.className = `relative ${rotationFor(first.id)}`;
+      el.className = "relative size-14";
+
+      if (group.length > 1) {
+        const stack = document.createElement("div");
+        stack.className =
+          "absolute inset-0 rounded-[10px] border-2 border-border bg-muted";
+        stack.style.transform = `translate(4px, 4px) rotate(${rotation + 6}deg)`;
+        el.appendChild(stack);
+      }
+
       const card = document.createElement("div");
-      card.className =
-        "flex size-14 items-center justify-center overflow-hidden rounded-[10px] border-2 border-border bg-card shadow-[3px_3px_0_var(--border)]";
+      card.className = cn(
+        "absolute inset-0 flex items-center justify-center overflow-hidden rounded-[10px] border-2 border-border shadow-[3px_3px_0_var(--border)]",
+        isOwn ? "bg-accent" : "bg-card",
+      );
+      card.style.transform = `rotate(${rotation}deg)`;
       el.appendChild(card);
 
       if (first.photo_url) {
@@ -174,6 +187,7 @@ export default function MapView() {
         const badge = document.createElement("div");
         badge.className =
           "absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full border border-border bg-secondary text-xs font-bold text-secondary-foreground shadow-[1px_1px_0_var(--border)]";
+        badge.style.transform = `rotate(${-rotation}deg)`;
         badge.textContent = String(group.length);
         el.appendChild(badge);
       }
@@ -197,7 +211,7 @@ export default function MapView() {
 
       return marker;
     });
-  }, [listings]);
+  }, [listings, currentUserId]);
 
   return (
     <div className="relative flex-1">
@@ -262,7 +276,7 @@ export default function MapView() {
 
       <Button
         asChild
-        className="absolute right-4 bottom-6 z-10 h-14 rounded-full px-6"
+        className="absolute right-4 bottom-20 z-10 h-14 rounded-full px-6"
       >
         <Link href="/listings/new">
           <ShoppingBag className="size-5" /> Share Food
