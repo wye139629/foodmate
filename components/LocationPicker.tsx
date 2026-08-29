@@ -52,6 +52,7 @@ export default function LocationPicker({
           mapId: "DEMO_MAP_ID",
           disableDefaultUI: true,
           zoomControl: true,
+          clickableIcons: false,
           gestureHandling: "greedy",
         });
         mapRef.current = map;

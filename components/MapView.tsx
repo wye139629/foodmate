@@ -160,6 +160,7 @@ export default function MapView({
         mapId: "DEMO_MAP_ID",
         disableDefaultUI: true,
         zoomControl: true,
+        clickableIcons: false,
       });
       mapRef.current = map;
       setMapReady(true);
