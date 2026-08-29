@@ -145,7 +145,7 @@ export default function ChatWindow({
           value={content}
           onChange={(event) => setContent(event.target.value)}
           placeholder="Type a message…"
-          className="h-11 flex-1 rounded-lg border border-border bg-card px-3.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+          className="h-11 flex-1 rounded-lg border border-border bg-card px-3.5 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring/50 md:text-sm"
         />
         <button
           type="submit"
