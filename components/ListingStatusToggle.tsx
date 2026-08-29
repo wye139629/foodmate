@@ -61,7 +61,7 @@ export default function ListingStatusToggle({
         disabled={pending}
         aria-pressed={isTaken}
         className={cn(
-          "rounded-lg border-2 border-border px-3 py-2 text-sm font-bold shadow-[2px_2px_0_var(--border)] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-50",
+          "rounded-lg border-2 border-border px-2.5 py-1.5 text-xs font-bold shadow-[2px_2px_0_var(--border)] transition-all active:translate-x-[2px] active:translate-y-[2px] active:shadow-none disabled:opacity-50",
           isTaken ? "bg-card" : "bg-accent text-accent-foreground",
         )}
       >
