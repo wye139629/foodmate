@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-auth";
+import { LISTING_CATEGORIES, type ListingCategory } from "@/lib/listing-categories";
 
 function getCurrentPosition(): Promise<GeolocationPosition> {
   return new Promise((resolve, reject) => {
@@ -50,6 +51,7 @@ export default function ListingForm() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [category, setCategory] = useState<ListingCategory | "">("");
   const [photo, setPhoto] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -71,6 +73,7 @@ export default function ListingForm() {
           name,
           description,
           photoUrl,
+          category: category || undefined,
           lat: position.coords.latitude,
           lng: position.coords.longitude,
         }),
@@ -107,6 +110,22 @@ export default function ListingForm() {
           value={description}
           onChange={(event) => setDescription(event.target.value)}
         />
+      </label>
+      <label>
+        Category (optional)
+        <select
+          value={category}
+          onChange={(event) =>
+            setCategory(event.target.value as ListingCategory | "")
+          }
+        >
+          <option value="">None</option>
+          {LISTING_CATEGORIES.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
       </label>
       <label>
         Photo (optional)

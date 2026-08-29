@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase-auth";
 import { haversineDistanceKm } from "@/lib/geo-distance";
+import { isListingCategory } from "@/lib/listing-categories";
 
 const DEFAULT_RADIUS_KM = 10;
 
@@ -45,10 +46,16 @@ export async function GET(request: Request) {
     );
   }
 
-  const { data, error } = await supabase
-    .from("listings")
-    .select("*")
-    .eq("status", "available");
+  const categoryParam = searchParams.get("category");
+  if (categoryParam !== null && !isListingCategory(categoryParam)) {
+    return NextResponse.json({ error: "Invalid category" }, { status: 400 });
+  }
+
+  let query = supabase.from("listings").select("*").eq("status", "available");
+  if (categoryParam !== null) {
+    query = query.eq("category", categoryParam);
+  }
+  const { data, error } = await query;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

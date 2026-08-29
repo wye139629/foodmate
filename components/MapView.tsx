@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import Script from "next/script";
 import Link from "next/link";
-import Image from "next/image";
 import { ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { LISTING_CATEGORIES, type ListingCategory } from "@/lib/listing-categories";
 
 interface Listing {
   id: string;
@@ -14,6 +15,7 @@ interface Listing {
   name: string;
   description: string | null;
   photo_url: string | null;
+  category: ListingCategory | null;
   lat: number;
   lng: number;
   distanceKm: number;
@@ -22,21 +24,26 @@ interface Listing {
 
 const RADIUS_OPTIONS = [5, 10, 25, 50];
 
+// Small deterministic "scattered photo" rotation per marker, keyed off the
+// listing id so it doesn't jump around on re-render.
+const MARKER_ROTATIONS = [
+  "rotate-3",
+  "-rotate-2",
+  "rotate-2",
+  "-rotate-3",
+  "rotate-1",
+  "-rotate-1",
+];
+function rotationFor(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = hash * 31 + id.charCodeAt(i);
+  return MARKER_ROTATIONS[Math.abs(hash) % MARKER_ROTATIONS.length];
+}
+
 declare global {
   interface Window {
     google: typeof google;
   }
-}
-
-function formatRelativeTime(isoDate: string): string {
-  const diffMs = Date.now() - new Date(isoDate).getTime();
-  const minutes = Math.floor(diffMs / 60_000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
 }
 
 function groupByCoordinate(listings: Listing[]): Listing[][] {
@@ -67,6 +74,7 @@ export default function MapView() {
     null,
   );
   const [radiusKm, setRadiusKm] = useState(10);
+  const [category, setCategory] = useState<ListingCategory | null>(null);
   const [listings, setListings] = useState<Listing[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -93,7 +101,7 @@ export default function MapView() {
     infoWindowRef.current = new window.google.maps.InfoWindow();
 
     const dot = document.createElement("div");
-    dot.className = "size-3 rounded-full border-2 border-card bg-accent";
+    dot.className = "size-[18px] rounded-[6px] border-2 border-card bg-accent";
     positionMarkerRef.current = new window.google.maps.marker.AdvancedMarkerElement(
       {
         map: mapRef.current,
@@ -104,15 +112,19 @@ export default function MapView() {
     );
   }, [scriptLoaded, position]);
 
-  // Fetch nearby listings whenever position or radius changes.
+  // Fetch nearby listings whenever position, radius, or category changes.
   useEffect(() => {
     if (!position) return;
 
     const controller = new AbortController();
-    fetch(
-      `/api/listings/nearby?lat=${position.latitude}&lng=${position.longitude}&radiusKm=${radiusKm}`,
-      { signal: controller.signal },
-    )
+    const params = new URLSearchParams({
+      lat: String(position.latitude),
+      lng: String(position.longitude),
+      radiusKm: String(radiusKm),
+    });
+    if (category) params.set("category", category);
+
+    fetch(`/api/listings/nearby?${params}`, { signal: controller.signal })
       .then((response) => {
         if (!response.ok) throw new Error("Could not load nearby listings");
         return response.json();
@@ -125,7 +137,7 @@ export default function MapView() {
       });
 
     return () => controller.abort();
-  }, [position, radiusKm]);
+  }, [position, radiusKm, category]);
 
   // Redraw markers whenever the listing set changes. Listings sharing exact
   // coordinates (e.g. a batch fridge scan) are grouped into one marker with
@@ -140,19 +152,28 @@ export default function MapView() {
     markersRef.current = groupByCoordinate(listings).map((group) => {
       const first = group[0];
       const el = document.createElement("div");
-      el.className = "relative";
-      const bubble = document.createElement("div");
-      bubble.className =
-        "flex size-[38px] items-center justify-center rounded-full border-2 border-border bg-card shadow-[2px_2px_0_var(--border)]";
-      el.appendChild(bubble);
-      createRoot(bubble).render(
-        <ShoppingBag className="size-5 text-foreground" strokeWidth={2} />,
-      );
+      el.className = `relative ${rotationFor(first.id)}`;
+      const card = document.createElement("div");
+      card.className =
+        "flex size-14 items-center justify-center overflow-hidden rounded-[10px] border-2 border-border bg-card shadow-[3px_3px_0_var(--border)]";
+      el.appendChild(card);
+
+      if (first.photo_url) {
+        const img = document.createElement("img");
+        img.src = first.photo_url;
+        img.alt = "";
+        img.className = "size-full object-cover";
+        card.appendChild(img);
+      } else {
+        createRoot(card).render(
+          <ShoppingBag className="size-6 text-foreground" strokeWidth={2} />,
+        );
+      }
 
       if (group.length > 1) {
         const badge = document.createElement("div");
         badge.className =
-          "absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full border border-border bg-secondary text-xs font-bold text-secondary-foreground";
+          "absolute -top-2 -right-2 flex size-5 items-center justify-center rounded-full border border-border bg-secondary text-xs font-bold text-secondary-foreground shadow-[1px_1px_0_var(--border)]";
         badge.textContent = String(group.length);
         el.appendChild(badge);
       }
@@ -187,13 +208,39 @@ export default function MapView() {
 
       <div ref={mapDivRef} className="absolute inset-0 bg-muted" />
 
-      <div className="absolute top-4 left-4 z-10 rounded-lg border-2 border-border bg-card px-3 py-2 shadow-[0_1px_1.5px_rgba(0,0,0,0.1),0_1px_1px_rgba(0,0,0,0.1)]">
-        <label className="flex items-center gap-1.5 text-sm font-medium">
-          Within
+      <div className="hide-scrollbar absolute top-4 left-0 z-10 flex w-full gap-2.5 overflow-x-auto px-4 pb-2">
+        <button
+          type="button"
+          onClick={() => setCategory(null)}
+          className={cn(
+            "shrink-0 rounded-full border-2 border-border px-4 py-2 text-sm font-bold",
+            category === null
+              ? "bg-foreground text-background shadow-[2px_2px_0_var(--accent)]"
+              : "bg-card text-foreground shadow-[2px_2px_0_var(--border)]",
+          )}
+        >
+          All
+        </button>
+        {LISTING_CATEGORIES.map((option) => (
+          <button
+            key={option}
+            type="button"
+            onClick={() => setCategory(option)}
+            className={cn(
+              "shrink-0 rounded-full border-2 border-border px-4 py-2 text-sm font-bold",
+              category === option
+                ? "bg-foreground text-background shadow-[2px_2px_0_var(--accent)]"
+                : "bg-card text-foreground shadow-[2px_2px_0_var(--border)]",
+            )}
+          >
+            {option}
+          </button>
+        ))}
+        <label className="flex shrink-0 items-center gap-1.5 rounded-full border-2 border-border bg-card px-4 py-2 text-sm font-bold shadow-[2px_2px_0_var(--border)]">
           <select
             value={radiusKm}
             onChange={(event) => setRadiusKm(Number(event.target.value))}
-            className="rounded border border-border bg-transparent text-sm"
+            className="bg-transparent"
           >
             {RADIUS_OPTIONS.map((option) => (
               <option key={option} value={option}>
@@ -204,12 +251,6 @@ export default function MapView() {
         </label>
       </div>
 
-      <Button asChild className="absolute top-4 right-4 z-10 h-11 rounded-lg">
-        <Link href="/listings/new">
-          <ShoppingBag className="size-4" /> Share Food
-        </Link>
-      </Button>
-
       {error && (
         <p
           role="alert"
@@ -219,37 +260,14 @@ export default function MapView() {
         </p>
       )}
 
-      {listings.length > 0 && (
-        <div className="hide-scrollbar absolute bottom-0 left-0 z-10 flex w-full gap-3 overflow-x-auto px-4 pb-4">
-          {listings.map((listing) => (
-            <div
-              key={listing.id}
-              className="flex h-full w-[280px] shrink-0 items-center gap-3 rounded-lg border-2 border-border bg-card p-3 shadow-[0_1px_1.5px_rgba(0,0,0,0.1),0_1px_1px_rgba(0,0,0,0.1)]"
-            >
-              <div className="relative size-12 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
-                {listing.photo_url && (
-                  <Image
-                    src={listing.photo_url}
-                    alt=""
-                    fill
-                    sizes="48px"
-                    className="object-cover"
-                  />
-                )}
-              </div>
-              <div className="min-w-0">
-                <p className="truncate font-heading text-base">
-                  {listing.name}
-                </p>
-                <p className="text-sm font-medium text-muted-foreground">
-                  {listing.distanceKm.toFixed(1)} km ·{" "}
-                  {formatRelativeTime(listing.created_at)}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <Button
+        asChild
+        className="absolute right-4 bottom-6 z-10 h-14 rounded-full px-6"
+      >
+        <Link href="/listings/new">
+          <ShoppingBag className="size-5" /> Share Food
+        </Link>
+      </Button>
     </div>
   );
 }

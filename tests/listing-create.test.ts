@@ -72,4 +72,32 @@ describe("POST /api/listings", () => {
       expect.objectContaining({ owner_id: "user-1", name: "Eggs", status: "available" }),
     );
   });
+
+  it("rejects an invalid category", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+
+    const response = await POST(
+      makeRequest({ name: "Eggs", category: "Not a real category", lat: 1, lng: 2 }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("stores a valid category", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    single.mockResolvedValue({
+      data: { id: "listing-1", owner_id: "user-1", name: "Kimchi", category: "Korean" },
+      error: null,
+    });
+
+    const response = await POST(
+      makeRequest({ name: "Kimchi", category: "Korean", lat: 1, lng: 2 }),
+    );
+
+    expect(response.status).toBe(201);
+    expect(insert).toHaveBeenCalledWith(
+      expect.objectContaining({ category: "Korean" }),
+    );
+  });
 });
