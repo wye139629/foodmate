@@ -156,7 +156,7 @@ export default async function BoardPage() {
         )}
       </section>
 
-      <BottomNav unreadChats={1} />
+      <BottomNav />
     </main>
   );
 }

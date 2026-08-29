@@ -119,7 +119,7 @@ export default async function ChatListPage() {
         </p>
       )}
 
-      <BottomNav unreadChats={0} />
+      <BottomNav />
     </main>
   );
 }

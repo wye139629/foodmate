@@ -206,7 +206,7 @@ export default async function ProfilePage() {
         </div>
       )}
 
-      <BottomNav unreadChats={1} />
+      <BottomNav />
     </main>
   );
 }

@@ -45,7 +45,7 @@ export default function MapKeepAlive() {
         </Link>
       </header>
       <MapView currentUserId={currentUserId} active={onMap} />
-      <BottomNav unreadChats={1} />
+      <BottomNav />
     </div>
   );
 }

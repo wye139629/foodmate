@@ -92,7 +92,7 @@ export default async function FeedbackPage({
         />
       )}
 
-      <BottomNav unreadChats={0} />
+      <BottomNav />
     </main>
   );
 }
