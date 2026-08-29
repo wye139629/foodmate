@@ -24,6 +24,7 @@ User logs in → creates a shareable food listing (with location) → another us
 | Database / Auth | Supabase (Postgres + Auth + Realtime) | Real user identity is required for chat and meetups — Auth is mandatory here, not optional |
 | Realtime chat | Supabase Realtime (Postgres change subscriptions) | No extra WebSocket service needed, consistent with the existing stack |
 | Map | Google Maps JavaScript API | Displays nearby shareable items, gets the user's current location |
+| AI fridge scan | Anthropic Claude API (`claude-opus-5`, vision + structured outputs) | Extracts a list of food/ingredient items from a fridge photo so the user doesn't have to type each one |
 | Deployment | Vercel | git push auto-deploys |
 
 **Non-negotiable rules (constitution-level, agents must not violate):**
@@ -54,6 +55,11 @@ User logs in → creates a shareable food listing (with location) → another us
 - **Given** the user is logged in
 - **When** the user fills in the food/ingredient they want to share (name, quantity description, optional photo, current location) and submits
 - **Then** the system saves this listing to the database, marks it as "available", and ties it to that user's location
+
+**FR-002b｜AI-assisted fridge scan (batch listing creation)**
+- **Given** the user is logged in and on the "create listing" page
+- **When** the user photographs their fridge and requests an AI scan instead of filling the form by hand
+- **Then** the system sends the photo to Claude (vision + structured outputs), which returns a candidate list of food items (name + quantity/description); the user reviews the list, deselects anything they don't want to share, and submits — each remaining item becomes its own listing (same batch photo, current location, "available" status)
 
 **FR-003｜Map showing nearby shareable items**
 - **Given** the user is logged in and has granted browser location access
@@ -98,7 +104,8 @@ User logs in → creates a shareable food listing (with location) → another us
 
 ## 7. Open Questions (must be resolved before implementation)
 
-- [NEEDS CLARIFICATION: Has a Google Maps API key been requested? Must be registered before work starts, and note that Google Maps requires a billing account to get a key even though the free tier should be sufficient for demo usage]
+- [RESOLVED] Google Maps API key: obtained, wired into `.env.local` / Vercel as `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`.
+- [RESOLVED] Anthropic API key (for FR-002b's fridge scan): obtained, wired into `.env.local` / Vercel as `ANTHROPIC_API_KEY` (server-only, not `NEXT_PUBLIC_`).
 - [NEEDS CLARIFICATION: Is the user's location fetched live each time (asked every time the map opens), or set as a fixed location in the profile? Recommend "fetch current location every time the map opens" for the MVP — simpler]
 - [NEEDS CLARIFICATION: Does the chat room need a notification mechanism (alert on new message)? For P1, recommend skipping push notifications — the user checks the chat room manually]
 - [NEEDS CLARIFICATION: What distance threshold defines "nearby"? Also, test accounts and mock data need to be prepared in advance with realistic spread to verify the map display works well for the demo]

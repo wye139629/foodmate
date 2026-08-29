@@ -29,16 +29,20 @@
 
 ---
 
-## T002｜FR-002 Set Up What You Can Share (can be developed in parallel with T003 — see plan below)
+## T002｜FR-002 + FR-002b Set Up What You Can Share, incl. AI Fridge Scan (can be developed in parallel with T003 — see plan below)
 
 - **Prerequisite**: T001 complete
 - **What**:
   - Build the listing form component (name, quantity description, optional photo upload, auto-fill current lat/lng)
-  - Create `/app/api/listings` POST route: saves the listing to the `listings` table, tied to the logged-in user's id, defaulting status to "available"
-- **File scope**: `/components/ListingForm.tsx`, `/app/api/listings/route.ts`
-- **Test command**: `npm test -- listing-create.test.ts` (verify form submission correctly calls the API; verify the API correctly writes to the database with owner_id set; verify error handling when lat/lng is missing)
-- **Acceptance mapping**: SPEC_food_sharing.md FR-002
-- **Commit message**: `feat(FR-002): set up shareable listing`
+  - Create `/app/api/listings` POST route: saves the listing to the `listings` table, tied to the logged-in user's id, defaulting status to "available"; requires auth (this route is not covered by middleware's page matcher, so it must check the session itself)
+  - Add a Supabase Storage bucket for listing photos (migration)
+  - Build the AI fridge-scan flow (FR-002b): a component to capture/upload a fridge photo, `/app/api/listings/scan` POST route that sends the photo to Claude (`claude-opus-5`, vision + structured outputs via Zod) and returns a candidate item list, and a review UI (checklist) that creates one listing per selected item via the existing create route
+- **File scope**: `/components/ListingForm.tsx`, `/components/FridgeScanner.tsx`, `/app/listings/new/page.tsx`, `/app/api/listings/route.ts`, `/app/api/listings/scan/route.ts`, `supabase/migrations/*_listing_photos_bucket.sql`
+- **Test commands**:
+  - `pnpm test -- listing-create.test.ts` (verify form submission correctly calls the API; verify the API correctly writes to the database with owner_id set; verify error handling when lat/lng is missing; verify an unauthenticated request is rejected)
+  - `pnpm test -- fridge-scan.test.ts` (mock the Anthropic client; verify the route returns a parsed item list matching the schema; verify it rejects a request with no photo and an unauthenticated request)
+- **Acceptance mapping**: SPEC.md FR-002, FR-002b
+- **Commit message**: `feat(FR-002): set up shareable listing, incl. AI fridge scan`
 - **Rollback**: `git revert <commit-hash>`
 
 ---
