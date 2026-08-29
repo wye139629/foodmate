@@ -67,8 +67,27 @@ export default async function BoardPage() {
         </Link>
       </header>
 
-      <section className="mt-6 flex flex-col justify-between rounded-2xl border-2 border-border bg-accent p-6 shadow-[4px_4px_0_var(--border)]">
-        <div className="flex items-center justify-between">
+      <section className="relative mt-6 flex flex-col justify-between overflow-hidden rounded-2xl border-2 border-border bg-muted p-6 shadow-[4px_4px_0_var(--border)]">
+        <svg
+          viewBox="0 0 120 120"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="pointer-events-none absolute -right-8 -bottom-12 size-56 -rotate-12 text-border opacity-[0.08]"
+        >
+          <ellipse cx="60" cy="50" rx="40" ry="12" fill="var(--muted)" />
+          <path d="M 20 50 C 20 95, 100 95, 100 50" />
+          <path d="M 20 65 C 5 65, 5 50, 20 50" />
+          <path d="M 100 65 C 115 65, 115 50, 100 50" />
+          <path d="M 30 75 C 45 85, 75 85, 90 75" strokeWidth="1.5" strokeDasharray="4 4" />
+          <path d="M 45 30 C 42 20, 50 12, 48 4" />
+          <path d="M 60 30 C 57 18, 65 10, 63 2" />
+          <path d="M 75 30 C 72 20, 80 12, 78 4" />
+        </svg>
+
+        <div className="relative z-10 flex items-center justify-between">
           <div className="flex -space-x-2">
             <span className="flex size-12 items-center justify-center rounded-full border-2 border-border bg-card shadow-[2px_2px_0_var(--border)]">
               <UserRound className="size-5" />
@@ -81,7 +100,7 @@ export default async function BoardPage() {
             This Week
           </span>
         </div>
-        <div className="mt-8">
+        <div className="relative z-10 mt-8">
           <p className="font-heading text-6xl tracking-tight">{weeklyShareCount ?? 0}</p>
           <p className="mt-3 text-lg font-bold">Neighbors met and shared food locally.</p>
         </div>
