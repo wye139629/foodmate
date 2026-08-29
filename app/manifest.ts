@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Share food and ingredients with people nearby.",
     start_url: "/",
     display: "standalone",
-    background_color: "#ffffff",
-    theme_color: "#F5A15C",
+    background_color: "#FBF6EB",
+    theme_color: "#FF8A4C",
     icons: [
       {
         src: "/icons/icon-192.png",
