@@ -21,6 +21,31 @@ async function uploadPhoto(file: File): Promise<string> {
     .publicUrl;
 }
 
+async function checkPhotoQuality(file: File): Promise<void> {
+  const formData = new FormData();
+  formData.append("photo", file);
+
+  const response = await fetch("/api/listings/check-photo", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body.error ?? "Could not check that photo");
+  }
+
+  const body = (await response.json()) as {
+    safe: boolean;
+    reason: string | null;
+  };
+  if (!body.safe) {
+    throw new Error(
+      body.reason ?? "That photo doesn't look safe to share — try another",
+    );
+  }
+}
+
 export default function ListingForm() {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -36,6 +61,7 @@ export default function ListingForm() {
 
     try {
       const position = await getCurrentPosition();
+      if (photo) await checkPhotoQuality(photo);
       const photoUrl = photo ? await uploadPhoto(photo) : undefined;
 
       const response = await fetch("/api/listings", {
