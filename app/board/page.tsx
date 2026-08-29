@@ -2,7 +2,6 @@ import Link from "next/link";
 import { Map as MapIcon, UserRound } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase-auth";
 import BottomNav from "@/components/BottomNav";
-import PostRequestButton from "@/components/PostRequestButton";
 
 function initialsFor(name: string) {
   return name.slice(0, 2).toUpperCase();
@@ -38,29 +37,23 @@ export default async function BoardPage() {
 
   const weekAgo = getWeekAgoIso();
 
-  const [{ data: justShared }, { data: lookingFor }, { count: weeklyShareCount }] =
-    await Promise.all([
-      supabase
-        .from("listings")
-        .select("id, name, description, photo_url, owner_id, recommend_score")
-        .order("created_at", { ascending: false })
-        .limit(5),
-      supabase
-        .from("requests")
-        .select("id, item_name, requester_id")
-        .order("created_at", { ascending: false })
-        .limit(5),
-      supabase
-        .from("listings")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "complete")
-        .gte("created_at", weekAgo),
-    ]);
-
-  const names = await getDisplayNames(supabase, [
-    ...(justShared ?? []).map((l) => l.owner_id),
-    ...(lookingFor ?? []).map((r) => r.requester_id),
+  const [{ data: justShared }, { count: weeklyShareCount }] = await Promise.all([
+    supabase
+      .from("listings")
+      .select("id, name, description, photo_url, owner_id, recommend_score")
+      .order("created_at", { ascending: false })
+      .limit(5),
+    supabase
+      .from("listings")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "complete")
+      .gte("created_at", weekAgo),
   ]);
+
+  const names = await getDisplayNames(
+    supabase,
+    (justShared ?? []).map((l) => l.owner_id),
+  );
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-sm flex-col px-4 pt-12 pb-24">
@@ -109,77 +102,51 @@ export default async function BoardPage() {
             {justShared.map((item) => {
               const ownerName = names.get(item.owner_id) ?? "A neighbor";
               return (
-                <li
-                  key={item.id}
-                  className="flex overflow-hidden rounded-lg border-2 border-border bg-card"
-                >
-                  {item.photo_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- Supabase Storage URL, not a static import
-                    <img
-                      src={item.photo_url}
-                      alt=""
-                      className="h-[140px] w-[130px] shrink-0 border-r-2 border-border object-cover"
-                    />
-                  ) : (
-                    <div className="h-[140px] w-[130px] shrink-0 border-r-2 border-border bg-muted" />
-                  )}
-                  <div className="flex flex-1 flex-col justify-between p-3">
-                    <div>
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="font-heading text-base">{item.name}</p>
-                        {item.recommend_score !== null && (
-                          <span className="shrink-0 rounded-full border border-border bg-secondary px-2 py-0.5 text-xs font-bold text-secondary-foreground">
-                            ⭐ {item.recommend_score}/10
-                          </span>
+                <li key={item.id}>
+                  <Link
+                    href={`/listings/${item.id}`}
+                    className="flex overflow-hidden rounded-lg border-2 border-border bg-card"
+                  >
+                    {item.photo_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- Supabase Storage URL, not a static import
+                      <img
+                        src={item.photo_url}
+                        alt=""
+                        className="h-[140px] w-[130px] shrink-0 border-r-2 border-border object-cover"
+                      />
+                    ) : (
+                      <div className="h-[140px] w-[130px] shrink-0 border-r-2 border-border bg-muted" />
+                    )}
+                    <div className="flex flex-1 flex-col justify-between p-3">
+                      <div>
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-heading text-base">{item.name}</p>
+                          {item.recommend_score !== null && (
+                            <span className="shrink-0 rounded-full border border-border bg-secondary px-2 py-0.5 text-xs font-bold text-secondary-foreground">
+                              ⭐ {item.recommend_score}/10
+                            </span>
+                          )}
+                        </div>
+                        {item.description && (
+                          <p className="mt-1 line-clamp-2 text-sm font-medium">
+                            {item.description}
+                          </p>
                         )}
                       </div>
-                      {item.description && (
-                        <p className="mt-1 text-sm font-medium">{item.description}</p>
-                      )}
+                      <div className="flex items-center gap-2 pt-2">
+                        <span className="flex size-6 items-center justify-center rounded-full border border-border bg-muted text-xs font-bold">
+                          {initialsFor(ownerName)}
+                        </span>
+                        <span className="text-sm font-bold">{ownerName}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 pt-2">
-                      <span className="flex size-6 items-center justify-center rounded-full border border-border bg-muted text-xs font-bold">
-                        {initialsFor(ownerName)}
-                      </span>
-                      <span className="text-sm font-bold">{ownerName}</span>
-                    </div>
-                  </div>
+                  </Link>
                 </li>
               );
             })}
           </ul>
         ) : (
           <p className="mt-3 text-sm text-muted-foreground">No shares yet — be the first!</p>
-        )}
-      </section>
-
-      <section className="mt-8">
-        <div className="flex items-center justify-between border-b-2 border-border pb-2">
-          <h2 className="font-heading text-sm tracking-wide uppercase">Looking For</h2>
-          <PostRequestButton />
-        </div>
-        {lookingFor && lookingFor.length > 0 ? (
-          <ul className="mt-3 flex flex-col gap-3">
-            {lookingFor.map((item) => {
-              const requesterName = names.get(item.requester_id) ?? "A neighbor";
-              return (
-                <li
-                  key={item.id}
-                  className="rounded-lg border-2 border-dashed border-border bg-card/50 p-4"
-                >
-                  <p className="font-heading text-base">{item.item_name}</p>
-                  <div className="mt-3 flex items-center gap-2 border-t border-dashed border-border/50 pt-3">
-                    <span className="flex size-6 items-center justify-center rounded-full border border-border bg-muted text-xs font-bold">
-                      {initialsFor(requesterName)}
-                    </span>
-                    <span className="text-sm font-bold">{requesterName}</span>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        ) : (
-          <p className="mt-3 text-sm text-muted-foreground">No requests yet.</p>
         )}
       </section>
 
