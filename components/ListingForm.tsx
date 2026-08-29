@@ -2,9 +2,10 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Camera } from "lucide-react";
+import { Camera } from "lucide-react";
 import { createClient } from "@/lib/supabase-auth";
 import { Button } from "@/components/ui/button";
+import BackButton from "@/components/BackButton";
 import { LISTING_CATEGORIES, type ListingCategory } from "@/lib/listing-categories";
 
 function getCurrentPosition(): Promise<GeolocationPosition> {
@@ -81,13 +82,7 @@ export default function ListingForm() {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-sm flex-col px-4 pt-6 pb-10">
       <header className="flex items-center gap-3 pb-4">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="flex size-9 items-center justify-center rounded-full border-2 border-border bg-card shadow-[2px_2px_0_var(--border)]"
-        >
-          <ChevronLeft className="size-5" />
-        </button>
+        <BackButton />
         <h1 className="font-heading text-xl">Share Food</h1>
       </header>
 

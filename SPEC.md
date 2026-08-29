@@ -60,7 +60,7 @@ User logs in → creates a shareable food listing (with location) → another us
 **FR-003｜Map showing nearby shareable items**
 - **Given** the user is logged in and has granted browser location access
 - **When** the user opens the map page
-- **Then** Google Maps shows markers, centered on the user's current location, for all "available" listings nearby — clicking a marker shows the item's details
+- **Then** Google Maps shows markers, centered on the user's current location, for all "available" listings nearby — clicking a marker opens a bottom-sheet listing every item at that marker's location; tapping an item navigates to that listing's detail page (`/listings/[id]`), showing photo, name, description, category, recommend score if present, and the sharer's name/avatar/member-since, with a Chat button (or "This is your listing" if it's the viewer's own)
 - **Also**: a category filter row (Korean / Italian / Chinese / Western / Mexican / Thai / Dessert / Other, plus "All") narrows the markers and the listing strip to that category — this pulls a slice of FR-007 (P2, listing filter) forward at William's request, same as the radius selector. `category` is optional on a listing; uncategorized listings only show under "All".
 
 **FR-004｜1-on-1 chat request**
@@ -128,6 +128,7 @@ User logs in → creates a shareable food listing (with location) → another us
 - [RESOLVED] FR-011 onboarding scope: safety guidelines + community rules acknowledgment, gating all identity-required pages until completed. Not identity verification, phone number, or other deeper trust mechanisms — those stay out of scope unless raised later.
 - [RESOLVED] FR-012 food quality check: gates listing creation (blocks submission on a flagged photo) rather than being advisory-only. Only runs when a photo is attached — photo stays optional per FR-002.
 - [RESOLVED] FR-013 recommend score (William, 2026-08-29): keeps FR-012's hard block unchanged and adds a score alongside it (not a replacement); score is shown publicly on map/board listing cards (not sharer-only); a low score is informational only and never blocks publishing.
+- [RESOLVED] FR-003 marker interaction (William, 2026-08-29): replaced the Google Maps InfoWindow with a custom bottom-sheet modal + a real listing detail page (`/listings/[id]`), matching a pasted Figma Make reference. The reference's "Bowl Rating" (completed shares/feedback tags) and "Food Identity" (roots/home/specialties/curious, from onboarding) sections are deferred — William chose the basic version using data we actually collect (photo/name/description/category/score/sharer name & member-since) rather than adding new onboarding fields and trust-tracking schema right now.
 
 ## 8. Definition of Done (termination condition for agents)
 

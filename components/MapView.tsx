@@ -42,6 +42,15 @@ declare global {
   }
 }
 
+function timeAgo(iso: string): string {
+  const minutes = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
 function groupByCoordinate(listings: Listing[]): Listing[][] {
   const groups = new Map<string, Listing[]>();
   for (const listing of listings) {
@@ -67,7 +76,6 @@ export default function MapView({
   const positionMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(
     null,
   );
-  const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
 
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const [position, setPosition] = useState<GeolocationCoordinates | null>(
@@ -77,6 +85,7 @@ export default function MapView({
   const [category, setCategory] = useState<ListingCategory | null>(null);
   const [listings, setListings] = useState<Listing[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<Listing[] | null>(null);
 
   // Fetch current location every time the map opens (SPEC.md Section 7).
   useEffect(() => {
@@ -98,7 +107,6 @@ export default function MapView({
       disableDefaultUI: true,
       zoomControl: true,
     });
-    infoWindowRef.current = new window.google.maps.InfoWindow();
 
     const dot = document.createElement("div");
     dot.className = "size-[18px] rounded-[6px] border-2 border-card bg-accent";
@@ -144,6 +152,8 @@ export default function MapView({
   // a count badge, matching how the data actually shows up in practice.
   useEffect(() => {
     if (!mapRef.current || !window.google) return;
+
+    setSelectedGroup(null);
 
     for (const marker of markersRef.current) {
       marker.map = null;
@@ -201,14 +211,7 @@ export default function MapView({
       });
 
       marker.addListener("click", () => {
-        const content = group
-          .map(
-            (listing) =>
-              `<strong>${listing.name}</strong><br/>${listing.description ?? ""}<br/>${listing.distanceKm.toFixed(1)} km away${listing.recommend_score !== null ? `<br/>⭐ Recommend score: ${listing.recommend_score}/10 — ${listing.recommend_reason ?? ""}` : ""}<br/><a href="/chat/new?ownerId=${listing.owner_id}">Contact the sharer</a>`,
-          )
-          .join("<hr/>");
-        infoWindowRef.current?.setContent(content);
-        infoWindowRef.current?.open({ map: mapRef.current, anchor: marker });
+        setSelectedGroup(group);
       });
 
       return marker;
@@ -276,14 +279,72 @@ export default function MapView({
         </p>
       )}
 
-      <Button
-        asChild
-        className="absolute right-4 bottom-20 z-10 h-14 rounded-full px-6"
-      >
-        <Link href="/listings/new">
-          <ShoppingBag className="size-5" /> Share Food
-        </Link>
-      </Button>
+      {!selectedGroup && (
+        <Button
+          asChild
+          className="absolute right-4 bottom-20 z-10 h-14 rounded-full px-6"
+        >
+          <Link href="/listings/new">
+            <ShoppingBag className="size-5" /> Share Food
+          </Link>
+        </Button>
+      )}
+
+      {selectedGroup && (
+        <div className="absolute inset-x-0 bottom-0 z-20 rounded-t-2xl border-2 border-b-0 border-border bg-card shadow-[0_-4px_0_var(--border)]">
+          <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-border" />
+          <div className="flex items-center justify-between px-4 pt-3 pb-2">
+            <h2 className="font-heading text-lg">
+              {selectedGroup.length} item{selectedGroup.length > 1 ? "s" : ""}{" "}
+              here
+            </h2>
+            <button
+              type="button"
+              onClick={() => setSelectedGroup(null)}
+              className="rounded-lg border-2 border-border bg-card px-3 py-1 text-sm font-bold shadow-[2px_2px_0_var(--border)]"
+            >
+              Close
+            </button>
+          </div>
+          <ul className="max-h-[45vh] overflow-y-auto px-4 pb-4">
+            {selectedGroup.map((listing) => (
+              <li key={listing.id}>
+                <Link
+                  href={`/listings/${listing.id}`}
+                  className="flex items-center gap-3 border-b border-border/40 py-3 last:border-b-0"
+                >
+                  <div className="size-14 shrink-0 overflow-hidden rounded-lg border-2 border-border bg-muted">
+                    {listing.photo_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- Supabase Storage URL, not a static import
+                      <img
+                        src={listing.photo_url}
+                        alt=""
+                        className="size-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex size-full items-center justify-center">
+                        <ShoppingBag className="size-5 text-foreground" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-heading text-base">
+                      {listing.name}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {listing.distanceKm.toFixed(1)} km ·{" "}
+                      {timeAgo(listing.created_at)}
+                      {listing.recommend_score !== null
+                        ? ` · ⭐ ${listing.recommend_score}/10`
+                        : ""}
+                    </p>
+                  </div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

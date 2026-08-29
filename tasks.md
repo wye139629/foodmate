@@ -65,6 +65,8 @@
 
 > **Revision (William, 2026-08-29):** refined against a second Figma reference (node 8:291). Adds a real category filter (pulls another slice of FR-007 forward, same reasoning as the radius selector): `category` column on `listings` (nullable, one of Korean/Italian/Chinese/Western/Mexican/Thai/Dessert/Other), a picker on `ListingForm.tsx`, `category` query param on `/api/listings/nearby`, and a filter pill row on the map. Markers become rotated photo-thumbnail cards instead of icon bubbles; "Share Food" moves to bottom-right. File scope extends to `supabase/migrations/*_listings_category.sql` and `/components/ListingForm.tsx` (extend, do not rewrite).
 
+> **Revision (William, 2026-08-29):** marker click now opens a bottom-sheet modal listing every item at that marker's coordinate (replacing the Google Maps `InfoWindow`), and tapping an item navigates to a new `/app/listings/[id]/page.tsx` detail page — matching a pasted Figma Make reference. Deferred from the reference: "Bowl Rating" (completed shares/feedback tags) and "Food Identity" (roots/home/specialties/curious from onboarding), since neither is backed by real data yet; the detail page uses only what we collect today (photo/name/description/category/recommend score, sharer display name + `profiles.created_at`). Adds `/components/BackButton.tsx` (shared chevron-back button, also now used by `ListingForm.tsx`) and `/app/listings/[id]/page.tsx`. File scope extends to `/components/MapView.tsx` (extend), `/components/BackButton.tsx` (new), `/app/listings/[id]/page.tsx` (new), `/components/ListingForm.tsx` (extend, do not rewrite).
+
 ---
 
 ## T004｜FR-004 1-on-1 Chat Request
