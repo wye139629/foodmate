@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { LISTING_CATEGORIES, type ListingCategory } from "@/lib/listing-categories";
 import { timeAgo } from "@/lib/time-ago";
+import { loadGoogleMaps } from "@/lib/google-maps-loader";
 
 interface Listing {
   id: string;
@@ -35,76 +36,6 @@ function rotationFor(id: string): number {
   let hash = 0;
   for (let i = 0; i < id.length; i++) hash = hash * 31 + id.charCodeAt(i);
   return MARKER_ROTATIONS[Math.abs(hash) % MARKER_ROTATIONS.length];
-}
-
-declare global {
-  interface Window {
-    google: typeof google;
-    __foodmateMapsInit?: () => void;
-  }
-}
-
-const MAPS_CALLBACK = "__foodmateMapsInit";
-const MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
-
-let mapsLoader: Promise<void> | null = null;
-
-function mapsFullyReady(): boolean {
-  return Boolean(window.google?.maps?.Map);
-}
-
-function waitForMapsApi(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (mapsFullyReady()) {
-      resolve();
-      return;
-    }
-
-    if (!MAPS_API_KEY) {
-      reject(new Error("Could not load Google Maps"));
-      return;
-    }
-
-    const previous = window.__foodmateMapsInit;
-    window.__foodmateMapsInit = () => {
-      previous?.();
-      resolve();
-    };
-
-    // A leftover `loading=async` tag (no callback) can sit in the document
-    // after HMR with `onload` already fired and `google.maps` still missing.
-    // Waiting on that tag hangs forever; drop it and load the callback URL.
-    for (const node of document.querySelectorAll("script[data-foodmate-maps]")) {
-      const tag = node as HTMLScriptElement;
-      if (!tag.src.includes("callback=")) tag.remove();
-    }
-
-    if (!document.querySelector("script[data-foodmate-maps]")) {
-      const script = document.createElement("script");
-      const params = new URLSearchParams({
-        key: MAPS_API_KEY,
-        libraries: "marker",
-        callback: MAPS_CALLBACK,
-        loading: "async",
-      });
-      script.src = `https://maps.googleapis.com/maps/api/js?${params}`;
-      script.async = true;
-      script.dataset.foodmateMaps = "true";
-      script.onerror = () => reject(new Error("Could not load Google Maps"));
-      document.head.appendChild(script);
-    }
-
-    const started = Date.now();
-    const poll = () => {
-      if (mapsFullyReady()) resolve();
-      else if (Date.now() - started > 15_000) {
-        reject(new Error("Could not load Google Maps"));
-      } else {
-        window.setTimeout(poll, 50);
-      }
-    };
-    poll();
-  });
 }
 
 type UserPosition = { lat: number; lng: number; accuracy: number };
@@ -137,35 +68,6 @@ function createUserLocationDot(): HTMLDivElement {
   dot.style.boxShadow = "0 0 0 2px #1A1A1A";
   wrap.appendChild(dot);
   return wrap;
-}
-
-function loadGoogleMaps(): Promise<void> {
-  if (typeof window === "undefined") {
-    return Promise.reject(new Error("Google Maps is browser-only"));
-  }
-  if (mapsLoader) return mapsLoader;
-
-  mapsLoader = (async () => {
-    if (typeof window.google?.maps?.importLibrary === "function") {
-      await window.google.maps.importLibrary("maps");
-      await window.google.maps.importLibrary("marker");
-    }
-    if (!mapsFullyReady()) {
-      await waitForMapsApi();
-      if (typeof window.google?.maps?.importLibrary === "function") {
-        await window.google.maps.importLibrary("maps");
-        await window.google.maps.importLibrary("marker");
-      }
-    }
-    if (!mapsFullyReady()) {
-      throw new Error("Could not load Google Maps");
-    }
-  })().catch((err) => {
-    mapsLoader = null;
-    throw err;
-  });
-
-  return mapsLoader;
 }
 
 function groupByCoordinate(listings: Listing[]): Listing[][] {
@@ -225,7 +127,7 @@ export default function MapView({
       return;
     }
 
-    const watchId = navigator.geolocation.watchPosition(
+    navigator.geolocation.getCurrentPosition(
       (pos) => {
         setError((current) =>
           current === "Could not get your current location" ? null : current,
@@ -243,8 +145,6 @@ export default function MapView({
       },
       { enableHighAccuracy: true, maximumAge: 15_000 },
     );
-
-    return () => navigator.geolocation.clearWatch(watchId);
   }, [active]);
 
   // Build the map as soon as the API is ready so the page is never a blank
@@ -371,10 +271,10 @@ export default function MapView({
     if (!mapReady || !mapRef.current || !window.google) return;
 
     // Not clearing selectedGroup here on purpose: this effect also reruns on
-    // routine background position updates (geolocation watchPosition fires
-    // repeatedly on real devices), which would otherwise slam an open item
-    // sheet shut — and its links along with it — mid-tap. The sheet is
-    // closed explicitly instead, only on deliberate filter changes below.
+    // background position/listings refreshes unrelated to the sheet (e.g.
+    // revisiting the map tab), which would otherwise slam an open item sheet
+    // shut — and its links along with it — mid-tap. The sheet is closed
+    // explicitly instead, only on deliberate filter changes below.
     for (const marker of markersRef.current) {
       marker.map = null;
     }

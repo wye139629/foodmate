@@ -6,13 +6,8 @@ import { Camera } from "lucide-react";
 import { createClient } from "@/lib/supabase-auth";
 import { Button } from "@/components/ui/button";
 import BackButton from "@/components/BackButton";
+import LocationPicker, { type LatLng } from "@/components/LocationPicker";
 import { LISTING_CATEGORIES, type ListingCategory } from "@/lib/listing-categories";
-
-function getCurrentPosition(): Promise<GeolocationPosition> {
-  return new Promise((resolve, reject) => {
-    navigator.geolocation.getCurrentPosition(resolve, reject);
-  });
-}
 
 async function uploadPhoto(file: File): Promise<string> {
   const supabase = createClient();
@@ -32,6 +27,7 @@ export default function ListingForm() {
   const [category, setCategory] = useState<ListingCategory | "">("");
   const [photo, setPhoto] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [position, setPosition] = useState<LatLng | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -46,10 +42,17 @@ export default function ListingForm() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+
+    if (!position) {
+      setError(
+        "Still finding your location — wait for the pin to appear, adjust it if needed, then try again.",
+      );
+      return;
+    }
+
     setSubmitting(true);
 
     try {
-      const position = await getCurrentPosition();
       const photoUrl = photo ? await uploadPhoto(photo) : undefined;
 
       const response = await fetch("/api/listings", {
@@ -60,8 +63,8 @@ export default function ListingForm() {
           description,
           photoUrl,
           category: category || undefined,
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
+          lat: position.lat,
+          lng: position.lng,
         }),
       });
 
@@ -161,6 +164,8 @@ export default function ListingForm() {
             className="resize-none rounded-lg border-2 border-border bg-card px-3 py-2.5 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           />
         </div>
+
+        <LocationPicker onChange={setPosition} />
 
         {error && (
           <p

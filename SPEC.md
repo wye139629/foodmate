@@ -54,8 +54,9 @@ User logs in → creates a shareable food listing (with location) → another us
 
 **FR-002｜Set up what you can share**
 - **Given** the user is logged in
-- **When** the user fills in the food/ingredient they want to share (name, quantity description, optional photo, current location) and submits
-- **Then** the system saves this listing to the database, marks it as "available", and ties it to that user's location
+- **When** the user fills in the food/ingredient they want to share (name, quantity description, optional photo, location) and submits
+- **Then** the system saves this listing to the database, marks it as "available", and ties it to the location the user confirmed
+- **Note:** location is device GPS by default, shown as a draggable pin on a small map in the form — the user can adjust it before publishing rather than the exact device coordinate being used silently. This matters for trust & safety (an unadjusted exact GPS reading can pin a listing to someone's precise home location) as much as for correcting a bad fix (e.g. indoors).
 
 **FR-003｜Map showing nearby shareable items**
 - **Given** the user is logged in and has granted browser location access
@@ -129,6 +130,8 @@ User logs in → creates a shareable food listing (with location) → another us
 - [RESOLVED] Google Maps API key: obtained, wired into `.env.local` / Vercel as `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`.
 - [RESOLVED] Anthropic API key (now powering FR-012's food quality check): obtained, wired into `.env.local` / Vercel as `ANTHROPIC_API_KEY` (server-only, not `NEXT_PUBLIC_`).
 - [RESOLVED] User location: fetched live via the browser Geolocation API every time the map opens (no stored/fixed profile location).
+- [RESOLVED] Map browsing position (William, 2026-08-29): switched from `watchPosition` (continuous) to a one-shot `getCurrentPosition()` per map visit. `watchPosition` fires repeatedly on real devices from GPS jitter alone, which was cascading into a listings refetch + full marker rebuild every few seconds — the root cause of a bug where the item-detail sheet could close itself out from under a user mid-tap. A single fetch per visit (already the map's existing "every time the map opens" behavior, since `active` toggles on each tab visit) is sufficient for a "browse nearby food" use case and removes the churn entirely.
+- [RESOLVED] Listing location capture (William, 2026-08-29): creating a listing no longer silently uses the device's exact GPS reading. A `LocationPicker` shows a small draggable-pin map (seeded from `getCurrentPosition()`, one-shot) so the user confirms or adjusts the point before publishing — addresses both a real trust & safety gap (exact home GPS otherwise becomes the public listing location) and bad fixes (e.g. indoors). The Google Maps loader (script injection + readiness polling) was extracted from `MapView.tsx` into `/lib/google-maps-loader.ts` so both it and the new picker share one implementation.
 - [RESOLVED] Chat notifications: none for P1 — no unread badge/alert. Messages still update live within an open chat via Supabase Realtime; the user checks the chat room manually otherwise.
 - [RESOLVED] "Nearby" distance: user-selectable radius (a control on the map page — 5 / 10 / 25 / 50 km presets, default 10 km), rather than one fixed threshold. This pulls a slice of FR-007 (P2, distance filter) forward into FR-003 at William's request. Test accounts/mock data with a realistic spread still need to be prepared before the demo.
 - [RESOLVED] FR-002b (AI-assisted fridge scan / batch listing creation) is removed entirely per William's request — code, tests, and the FR itself. The Anthropic integration is repurposed for FR-012's food quality check instead of being dropped.
