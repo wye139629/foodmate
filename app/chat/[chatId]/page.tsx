@@ -14,9 +14,13 @@ export default async function ChatPage({
 }) {
   const { chatId } = await params;
   const supabase = await createServerSupabaseClient();
+  // Middleware already verified this request's JWT with a network round-trip
+  // (auth.getUser()) before rendering started — getSession() just decodes the
+  // already-verified cookie locally, no second round-trip.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user;
 
   const [{ data: chat }, { data: messages }] = await Promise.all([
     supabase
@@ -37,19 +41,20 @@ export default async function ChatPage({
       : chat.user_id_1
     : null;
 
-  const { data: otherProfile } = otherUserId
-    ? await supabase.from("profiles").select("display_name").eq("id", otherUserId).single()
-    : { data: null };
+  const [{ data: otherProfile }, { data: listing }] = await Promise.all([
+    otherUserId
+      ? supabase.from("profiles").select("display_name").eq("id", otherUserId).single()
+      : Promise.resolve({ data: null }),
+    chat?.listing_id
+      ? supabase
+          .from("listings")
+          .select("id, name, photo_url, status, category")
+          .eq("id", chat.listing_id)
+          .single()
+      : Promise.resolve({ data: null }),
+  ]);
 
   const otherName = otherProfile?.display_name ?? "A neighbor";
-
-  const { data: listing } = chat?.listing_id
-    ? await supabase
-        .from("listings")
-        .select("id, name, photo_url, status, category")
-        .eq("id", chat.listing_id)
-        .single()
-    : { data: null };
 
   return (
     <div className="flex h-screen flex-col bg-background">

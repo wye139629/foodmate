@@ -22,15 +22,20 @@ export default async function ListingDetailPage({
 }) {
   const { id } = await params;
   const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: listing } = await supabase
-    .from("listings")
-    .select("*")
-    .eq("id", id)
-    .single();
+  // Middleware already verified this request's JWT with a network round-trip
+  // (auth.getUser()) before rendering started — getSession() just decodes the
+  // already-verified cookie locally, no second round-trip. Session and
+  // listing are independent, so fetch them together.
+  const [
+    {
+      data: { session },
+    },
+    { data: listing },
+  ] = await Promise.all([
+    supabase.auth.getSession(),
+    supabase.from("listings").select("*").eq("id", id).single(),
+  ]);
+  const user = session?.user;
 
   if (!listing) {
     return (

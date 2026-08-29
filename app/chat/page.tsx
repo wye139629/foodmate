@@ -9,9 +9,13 @@ function initialsFor(name: string) {
 
 export default async function ChatListPage() {
   const supabase = await createServerSupabaseClient();
+  // Middleware already verified this request's JWT with a network round-trip
+  // (auth.getUser()) before rendering started — getSession() just decodes the
+  // already-verified cookie locally, no second round-trip.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user;
 
   const email = user?.email ?? "Guest";
   const initial = email.charAt(0).toUpperCase();
@@ -22,14 +26,22 @@ export default async function ChatListPage() {
     .or(`user_id_1.eq.${user?.id},user_id_2.eq.${user?.id}`);
 
   const chatIds = (chats ?? []).map((chat) => chat.id);
+  const otherUserIds = (chats ?? []).map((chat) =>
+    chat.user_id_1 === user?.id ? chat.user_id_2 : chat.user_id_1,
+  );
 
-  const { data: messages } = chatIds.length
-    ? await supabase
-        .from("messages")
-        .select("chat_id, content, created_at")
-        .in("chat_id", chatIds)
-        .order("created_at", { ascending: false })
-    : { data: [] };
+  const [{ data: messages }, { data: profiles }] = await Promise.all([
+    chatIds.length
+      ? supabase
+          .from("messages")
+          .select("chat_id, content, created_at")
+          .in("chat_id", chatIds)
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
+    otherUserIds.length
+      ? supabase.from("profiles").select("id, display_name").in("id", otherUserIds)
+      : Promise.resolve({ data: [] }),
+  ]);
 
   const latestByChat = new Map<string, { content: string; created_at: string }>();
   for (const message of messages ?? []) {
@@ -38,12 +50,6 @@ export default async function ChatListPage() {
     }
   }
 
-  const otherUserIds = (chats ?? []).map((chat) =>
-    chat.user_id_1 === user?.id ? chat.user_id_2 : chat.user_id_1,
-  );
-  const { data: profiles } = otherUserIds.length
-    ? await supabase.from("profiles").select("id, display_name").in("id", otherUserIds)
-    : { data: [] };
   const nameById = new Map((profiles ?? []).map((p) => [p.id, p.display_name]));
 
   const rows = (chats ?? [])

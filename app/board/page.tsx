@@ -28,9 +28,13 @@ async function getDisplayNames(
 
 export default async function BoardPage() {
   const supabase = await createServerSupabaseClient();
+  // Middleware already verified this request's JWT with a network round-trip
+  // (auth.getUser()) before rendering started — getSession() just decodes the
+  // already-verified cookie locally, no second round-trip.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user;
 
   const email = user?.email ?? "Guest";
   const initial = email.charAt(0).toUpperCase();
