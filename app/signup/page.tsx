@@ -18,25 +18,30 @@ export default function SignupPage() {
     setError(null);
     setLoading(true);
 
-    const supabase = createClient();
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-    });
+    try {
+      const supabase = createClient();
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+      });
 
-    setLoading(false);
-    if (signUpError) {
-      setError(signUpError.message);
-      return;
+      if (signUpError) {
+        setError(signUpError.message);
+        return;
+      }
+
+      if (data.session) {
+        router.push("/");
+        router.refresh();
+        return;
+      }
+
+      setSubmitted(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setLoading(false);
     }
-
-    if (data.session) {
-      router.push("/");
-      router.refresh();
-      return;
-    }
-
-    setSubmitted(true);
   }
 
   if (submitted) {

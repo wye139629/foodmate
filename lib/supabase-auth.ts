@@ -1,14 +1,21 @@
 import { createBrowserClient, createServerClient } from "@supabase/ssr";
 import type { NextRequest, NextResponse } from "next/server";
 
-function env(name: string): string {
-  const value = process.env[name];
+function required(value: string | undefined, name: string): string {
   if (!value) throw new Error(`Missing environment variable: ${name}`);
   return value;
 }
 
-const SUPABASE_URL = () => env("NEXT_PUBLIC_SUPABASE_URL");
-const SUPABASE_KEY = () => env("NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY");
+// NEXT_PUBLIC_ vars must be referenced as a literal `process.env.NEXT_PUBLIC_X`
+// (not a dynamic `process.env[name]`) so Next.js can inline them into the
+// browser bundle at build time.
+const SUPABASE_URL = () =>
+  required(process.env.NEXT_PUBLIC_SUPABASE_URL, "NEXT_PUBLIC_SUPABASE_URL");
+const SUPABASE_KEY = () =>
+  required(
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+  );
 
 /** Browser client, for use in Client Components. */
 export function createClient() {
