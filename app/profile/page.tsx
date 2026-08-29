@@ -7,6 +7,7 @@ import BottomNav from "@/components/BottomNav";
 import ListingStatusToggle from "@/components/ListingStatusToggle";
 import RatingBadge from "@/components/RatingBadge";
 import VerifiedBadge from "@/components/VerifiedBadge";
+import StudentIdUpload from "@/components/StudentIdUpload";
 
 function initialsFor(name: string) {
   return name.slice(0, 2).toUpperCase();
@@ -92,6 +93,11 @@ export default async function ProfilePage() {
           {VERIFICATION_LABELS[profile?.verification_status ?? "unverified"] ??
             VERIFICATION_LABELS.unverified}
         </p>
+        {user &&
+          profile?.verification_status !== "verified" &&
+          profile?.verification_status !== "pending" && (
+            <StudentIdUpload userId={user.id} />
+          )}
       </div>
 
       <div className="mb-8 flex overflow-hidden rounded-lg border border-border bg-card">

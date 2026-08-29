@@ -83,6 +83,11 @@ export default async function PublicProfilePage({
           <p className="text-sm font-medium text-muted-foreground">
             Neighbour since {memberSince(profile.created_at)}
           </p>
+          <p className="mt-0.5 text-sm font-medium text-muted-foreground">
+            {profile.verification_status === "verified"
+              ? "✅ Verified student"
+              : "Not verified yet"}
+          </p>
         </div>
       </div>
 
