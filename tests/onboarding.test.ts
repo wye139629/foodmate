@@ -58,6 +58,17 @@ describe("onboarding gate", () => {
     expect(response.headers.get("location")).toBeNull();
   });
 
+  it("sends an already-onboarded user away from /onboarding", async () => {
+    getUser.mockResolvedValue({
+      data: { user: { id: "user-1", user_metadata: { onboarded: true } } },
+    });
+
+    const response = await middleware(makeRequest("/onboarding"));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toContain("/map");
+  });
+
   it("still redirects an unauthenticated user to /login, not /onboarding", async () => {
     getUser.mockResolvedValue({ data: { user: null } });
 

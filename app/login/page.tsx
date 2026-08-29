@@ -22,7 +22,7 @@ export default function LoginPage() {
 
     try {
       const supabase = createClient();
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -32,7 +32,26 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/onboarding");
+      const redirectedFrom = new URLSearchParams(window.location.search).get(
+        "redirectedFrom",
+      );
+      const onboarded = data.user?.user_metadata?.onboarded === true;
+      if (onboarded) {
+        const next =
+          redirectedFrom &&
+          redirectedFrom.startsWith("/") &&
+          !redirectedFrom.startsWith("//") &&
+          redirectedFrom !== "/onboarding"
+            ? redirectedFrom
+            : "/map";
+        router.push(next);
+      } else {
+        const onboarding = new URL("/onboarding", window.location.origin);
+        if (redirectedFrom) {
+          onboarding.searchParams.set("redirectedFrom", redirectedFrom);
+        }
+        router.push(`${onboarding.pathname}${onboarding.search}`);
+      }
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");

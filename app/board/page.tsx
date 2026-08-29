@@ -64,7 +64,7 @@ export default async function BoardPage() {
   ]);
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-sm flex-col px-4 pt-12 pb-24">
+    <main className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col px-4 pt-12 pb-24">
       <header className="flex items-center justify-between border-b-2 border-border pb-4">
         <h1 className="font-heading text-2xl">Nearby Shares</h1>
         <SignOutButton className="size-6 rounded-full border p-0 text-xs">

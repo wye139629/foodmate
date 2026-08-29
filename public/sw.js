@@ -12,5 +12,9 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
+  const url = new URL(event.request.url);
+  // Passthrough must not wrap Google Maps / Supabase — fetch() in a SW
+  // breaks CORS and the Maps script never starts.
+  if (url.origin !== self.location.origin) return;
   event.respondWith(fetch(event.request));
 });

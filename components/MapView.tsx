@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import Script from "next/script";
 import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -40,7 +39,131 @@ function rotationFor(id: string): number {
 declare global {
   interface Window {
     google: typeof google;
+    __foodmateMapsInit?: () => void;
   }
+}
+
+const MAPS_CALLBACK = "__foodmateMapsInit";
+const MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+let mapsLoader: Promise<void> | null = null;
+
+function mapsFullyReady(): boolean {
+  return Boolean(window.google?.maps?.Map);
+}
+
+function waitForMapsApi(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (mapsFullyReady()) {
+      resolve();
+      return;
+    }
+
+    if (!MAPS_API_KEY) {
+      reject(new Error("Could not load Google Maps"));
+      return;
+    }
+
+    const previous = window.__foodmateMapsInit;
+    window.__foodmateMapsInit = () => {
+      previous?.();
+      resolve();
+    };
+
+    // A leftover `loading=async` tag (no callback) can sit in the document
+    // after HMR with `onload` already fired and `google.maps` still missing.
+    // Waiting on that tag hangs forever; drop it and load the callback URL.
+    for (const node of document.querySelectorAll("script[data-foodmate-maps]")) {
+      const tag = node as HTMLScriptElement;
+      if (!tag.src.includes("callback=")) tag.remove();
+    }
+
+    if (!document.querySelector("script[data-foodmate-maps]")) {
+      const script = document.createElement("script");
+      const params = new URLSearchParams({
+        key: MAPS_API_KEY,
+        libraries: "marker",
+        callback: MAPS_CALLBACK,
+      });
+      script.src = `https://maps.googleapis.com/maps/api/js?${params}`;
+      script.async = true;
+      script.dataset.foodmateMaps = "true";
+      script.onerror = () => reject(new Error("Could not load Google Maps"));
+      document.head.appendChild(script);
+    }
+
+    const started = Date.now();
+    const poll = () => {
+      if (mapsFullyReady()) resolve();
+      else if (Date.now() - started > 15_000) {
+        reject(new Error("Could not load Google Maps"));
+      } else {
+        window.setTimeout(poll, 50);
+      }
+    };
+    poll();
+  });
+}
+
+type UserPosition = { lat: number; lng: number; accuracy: number };
+
+function copyPosition(coords: GeolocationCoordinates): UserPosition {
+  return {
+    lat: coords.latitude,
+    lng: coords.longitude,
+    accuracy: coords.accuracy,
+  };
+}
+
+function createUserLocationDot(): HTMLDivElement {
+  const wrap = document.createElement("div");
+  wrap.style.width = "22px";
+  wrap.style.height = "22px";
+  wrap.style.position = "relative";
+
+  const dot = document.createElement("div");
+  dot.style.position = "absolute";
+  dot.style.top = "50%";
+  dot.style.left = "50%";
+  dot.style.width = "16px";
+  dot.style.height = "16px";
+  dot.style.margin = "-8px 0 0 -8px";
+  dot.style.borderRadius = "50%";
+  dot.style.background = "#FF8A4C";
+  dot.style.border = "3px solid #FFFDF8";
+  dot.style.boxSizing = "border-box";
+  dot.style.boxShadow = "0 0 0 2px #1A1A1A";
+  wrap.appendChild(dot);
+  return wrap;
+}
+
+function loadGoogleMaps(): Promise<void> {
+  if (typeof window === "undefined") {
+    return Promise.reject(new Error("Google Maps is browser-only"));
+  }
+  if (mapsLoader) return mapsLoader;
+
+  mapsLoader = (async () => {
+    if (typeof window.google?.maps?.importLibrary === "function") {
+      await window.google.maps.importLibrary("maps");
+      await window.google.maps.importLibrary("marker");
+    }
+    if (!mapsFullyReady()) {
+      await waitForMapsApi();
+      if (typeof window.google?.maps?.importLibrary === "function") {
+        await window.google.maps.importLibrary("maps");
+        await window.google.maps.importLibrary("marker");
+      }
+    }
+    if (!mapsFullyReady()) {
+      throw new Error("Could not load Google Maps");
+    }
+  })().catch((err) => {
+    mapsLoader = null;
+    throw err;
+  });
+
+  return mapsLoader;
 }
 
 function groupByCoordinate(listings: Listing[]): Listing[][] {
@@ -59,8 +182,10 @@ function groupByCoordinate(listings: Listing[]): Listing[][] {
 
 export default function MapView({
   currentUserId,
+  active = true,
 }: {
   currentUserId: string | null;
+  active?: boolean;
 }) {
   const mapDivRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -68,49 +193,147 @@ export default function MapView({
   const positionMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(
     null,
   );
+  const accuracyCircleRef = useRef<google.maps.Circle | null>(null);
 
-  const [scriptLoaded, setScriptLoaded] = useState(false);
-  const [position, setPosition] = useState<GeolocationCoordinates | null>(
-    null,
-  );
+  const [mapsLoaded, setMapsLoaded] = useState(false);
+  const [mapReady, setMapReady] = useState(false);
+  const [position, setPosition] = useState<UserPosition | null>(null);
   const [radiusKm, setRadiusKm] = useState(10);
   const [category, setCategory] = useState<ListingCategory | null>(null);
   const [listings, setListings] = useState<Listing[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<Listing[] | null>(null);
 
-  // Fetch current location every time the map opens (SPEC.md Section 7).
   useEffect(() => {
-    navigator.geolocation.getCurrentPosition(
-      (pos) => setPosition(pos.coords),
-      () => setError("Could not get your current location"),
-    );
+    document.getElementById("foodmate-google-map")?.remove();
+    void loadGoogleMaps()
+      .then(() => setMapsLoaded(true))
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : "Could not load the map");
+      });
   }, []);
 
-  // Initialize the map once the script has loaded and we have a position.
+  // Fetch current location every time the map tab is shown (SPEC.md Section 7).
+  // Copy lat/lng inside the callback — storing GeolocationCoordinates itself
+  // can yield 0/undefined after the callback returns (WebKit).
   useEffect(() => {
-    if (!scriptLoaded || !position || !mapDivRef.current || mapRef.current) {
+    if (!active) return;
+    if (!navigator.geolocation) {
+      setError("Could not get your current location");
       return;
     }
-    mapRef.current = new window.google.maps.Map(mapDivRef.current, {
-      center: { lat: position.latitude, lng: position.longitude },
-      zoom: 13,
-      mapId: "FOODMATE_MAP",
-      disableDefaultUI: true,
-      zoomControl: true,
-    });
 
-    const dot = document.createElement("div");
-    dot.className = "size-[18px] rounded-[6px] border-2 border-card bg-accent";
-    positionMarkerRef.current = new window.google.maps.marker.AdvancedMarkerElement(
-      {
-        map: mapRef.current,
-        position: { lat: position.latitude, lng: position.longitude },
-        content: dot,
-        zIndex: 0,
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        setError((current) =>
+          current === "Could not get your current location" ? null : current,
+        );
+        setPosition(copyPosition(pos.coords));
       },
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) {
+          setError(
+            "Location access is blocked. Enable it in the browser to see your position.",
+          );
+        } else {
+          setError("Could not get your current location");
+        }
+      },
+      { enableHighAccuracy: true, maximumAge: 15_000 },
     );
-  }, [scriptLoaded, position]);
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [active]);
+
+  // Build the map as soon as the API is ready so the page is never a blank
+  // cream rectangle while GPS is still resolving.
+  useEffect(() => {
+    if (!mapsLoaded || !mapDivRef.current || mapRef.current) return;
+    if (!window.google?.maps?.Map) return;
+
+    try {
+      const map = new window.google.maps.Map(mapDivRef.current, {
+        center: { lat: 0, lng: 0 },
+        zoom: 2,
+        mapId: "DEMO_MAP_ID",
+        disableDefaultUI: true,
+        zoomControl: true,
+      });
+      mapRef.current = map;
+      setMapReady(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not load the map");
+    }
+  }, [mapsLoaded]);
+
+  useEffect(() => {
+    if (!mapReady || !mapRef.current || !position) return;
+
+    const map = mapRef.current;
+    const center = { lat: position.lat, lng: position.lng };
+    map.setCenter(center);
+    map.setZoom(13);
+
+    if (!accuracyCircleRef.current) {
+      accuracyCircleRef.current = new window.google.maps.Circle({
+        map,
+        center,
+        radius: Math.max(position.accuracy || 0, 40),
+        fillColor: "#FF8A4C",
+        fillOpacity: 0.18,
+        strokeColor: "#FF8A4C",
+        strokeOpacity: 0.9,
+        strokeWeight: 2,
+        clickable: false,
+        zIndex: 1,
+      });
+    } else {
+      accuracyCircleRef.current.setCenter(center);
+      accuracyCircleRef.current.setRadius(Math.max(position.accuracy || 0, 40));
+      accuracyCircleRef.current.setMap(map);
+    }
+
+    const MarkerCtor = window.google.maps.marker?.AdvancedMarkerElement;
+    const PinCtor = window.google.maps.marker?.PinElement;
+    if (!MarkerCtor) return;
+
+    if (!positionMarkerRef.current) {
+      let content: HTMLElement;
+      if (PinCtor) {
+        content = new PinCtor({
+          background: "#FF8A4C",
+          borderColor: "#1A1A1A",
+          glyphColor: "#1A1A1A",
+          scale: 1.2,
+        });
+      } else {
+        content = createUserLocationDot();
+      }
+
+      const marker = new MarkerCtor({
+        map,
+        position: center,
+        content,
+        title: "You are here",
+        zIndex: 999999,
+        collisionBehavior: "REQUIRED",
+      });
+      if (content.parentNode !== marker) {
+        marker.append(content);
+      }
+      positionMarkerRef.current = marker;
+    } else {
+      positionMarkerRef.current.position = center;
+      positionMarkerRef.current.map = map;
+    }
+  }, [mapReady, position]);
+
+  useEffect(() => {
+    if (!active || !mapRef.current) return;
+    if (position) {
+      mapRef.current.setCenter({ lat: position.lat, lng: position.lng });
+    }
+  }, [active, position]);
 
   // Fetch nearby listings whenever position, radius, or category changes.
   useEffect(() => {
@@ -118,8 +341,8 @@ export default function MapView({
 
     const controller = new AbortController();
     const params = new URLSearchParams({
-      lat: String(position.latitude),
-      lng: String(position.longitude),
+      lat: String(position.lat),
+      lng: String(position.lng),
       radiusKm: String(radiusKm),
     });
     if (category) params.set("category", category);
@@ -143,7 +366,7 @@ export default function MapView({
   // coordinates (e.g. a batch fridge scan) are grouped into one marker with
   // a count badge, matching how the data actually shows up in practice.
   useEffect(() => {
-    if (!mapRef.current || !window.google) return;
+    if (!mapReady || !mapRef.current || !window.google) return;
 
     setSelectedGroup(null);
 
@@ -201,6 +424,9 @@ export default function MapView({
         position: { lat: first.lat, lng: first.lng },
         content: el,
       });
+      if (el.parentNode !== marker) {
+        marker.append(el);
+      }
 
       marker.addListener("click", () => {
         setSelectedGroup(group);
@@ -208,15 +434,10 @@ export default function MapView({
 
       return marker;
     });
-  }, [listings, currentUserId]);
+  }, [listings, currentUserId, mapReady]);
 
   return (
-    <div className="relative flex-1">
-      <Script
-        src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=marker`}
-        onLoad={() => setScriptLoaded(true)}
-      />
-
+    <div className="relative min-h-0 flex-1">
       <div ref={mapDivRef} className="absolute inset-0 bg-muted" />
 
       <div className="hide-scrollbar absolute top-4 left-0 z-10 flex w-full gap-2.5 overflow-x-auto px-4 pb-2">

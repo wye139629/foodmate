@@ -24,6 +24,18 @@ export async function middleware(request: NextRequest) {
   }
 
   const onboarded = user.user_metadata?.onboarded === true;
+  if (onboarded && pathname === "/onboarding") {
+    const redirectedFrom = request.nextUrl.searchParams.get("redirectedFrom");
+    const target =
+      redirectedFrom &&
+      redirectedFrom.startsWith("/") &&
+      !redirectedFrom.startsWith("//") &&
+      redirectedFrom !== "/onboarding"
+        ? redirectedFrom
+        : "/map";
+    return NextResponse.redirect(new URL(target, request.url));
+  }
+
   if (!onboarded && pathname !== "/onboarding") {
     const onboardingUrl = new URL("/onboarding", request.url);
     onboardingUrl.searchParams.set("redirectedFrom", pathname);
