@@ -43,6 +43,13 @@ supabase/.temp
 # playwright MCP tool output
 .playwright-mcp
 
+# next.js auto-generated per-tool agent scaffolding (hooks/skills)
+.agents/
+.claude/
+.codex/
+.cursor/
+.gemini/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

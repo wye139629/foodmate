@@ -5,6 +5,7 @@ import Script from "next/script";
 
 interface Listing {
   id: string;
+  owner_id: string;
   name: string;
   description: string | null;
   lat: number;
@@ -93,7 +94,7 @@ export default function MapView() {
       });
       marker.addListener("click", () => {
         infoWindowRef.current?.setContent(
-          `<strong>${listing.name}</strong><br/>${listing.description ?? ""}<br/>${listing.distanceKm.toFixed(1)} km away`,
+          `<strong>${listing.name}</strong><br/>${listing.description ?? ""}<br/>${listing.distanceKm.toFixed(1)} km away<br/><a href="/chat/new?ownerId=${listing.owner_id}">Contact the sharer</a>`,
         );
         infoWindowRef.current?.open({ map: mapRef.current, anchor: marker });
       });
