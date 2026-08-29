@@ -19,6 +19,13 @@ function memberSince(iso: string) {
   });
 }
 
+const VERIFICATION_LABELS: Record<string, string> = {
+  verified: "✅ Verified student",
+  pending: "⏳ Submitted — pending review",
+  rejected: "Not verified — your last submission was rejected",
+  unverified: "Not verified yet",
+};
+
 export default async function ProfilePage() {
   const supabase = await createServerSupabaseClient();
   const {
@@ -75,6 +82,16 @@ export default async function ProfilePage() {
         <SignOutButton className="h-9 rounded-lg px-3 text-sm font-semibold">
           Log out
         </SignOutButton>
+      </div>
+
+      <div className="mb-8 rounded-lg border border-border bg-card p-4">
+        <p className="font-heading mb-1 text-xs font-bold tracking-widest text-muted-foreground uppercase">
+          Student Verification
+        </p>
+        <p className="text-sm font-semibold">
+          {VERIFICATION_LABELS[profile?.verification_status ?? "unverified"] ??
+            VERIFICATION_LABELS.unverified}
+        </p>
       </div>
 
       <div className="mb-8 flex overflow-hidden rounded-lg border border-border bg-card">
