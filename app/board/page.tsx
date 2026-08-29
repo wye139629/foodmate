@@ -69,7 +69,7 @@ export default async function BoardPage() {
         <h1 className="font-heading text-2xl">Nearby Shares</h1>
         <Link
           href="/profile"
-          className="flex size-6 items-center justify-center rounded-full border border-border bg-muted text-xs font-medium"
+          className="flex size-8 items-center justify-center rounded-full border border-border bg-muted text-sm font-medium"
         >
           {initial}
         </Link>
