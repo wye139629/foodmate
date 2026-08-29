@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FoodMate
 
-## Getting Started
+Food & ingredient sharing platform. Log in → list what you can share → see nearby shares on a map → chat with the sharer → meet up.
 
-First, run the development server:
+See [`SPEC.md`](./SPEC.md) for the full spec and [`tasks.md`](./tasks.md) for the task breakdown. [`AGENT.md`](./AGENT.md) has the day-to-day dev workflow (worktrees, commands, env vars).
+
+## Stack
+
+Next.js (App Router, TypeScript) · Supabase (Postgres + Auth + Realtime) · Google Maps JS API · Anthropic Claude (food photo check) · Vercel
+
+## Getting started
+
+**Package manager is pnpm — not npm/yarn.** Install it if you don't have it: `corepack enable` (this repo pins `pnpm@10.16.1` via `packageManager` in `package.json`).
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
+cp .env.local.example .env.local   # then fill in the values, see below
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Environment variables (`.env.local`)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Var | Where to get it |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project → Settings → API |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase project → Settings → API |
+| `SUPABASE_SECRET_KEY` | Supabase project → Settings → API |
+| `SUPABASE_JWKS_URL` | Supabase project → Settings → API (JWT settings) |
+| `ANTHROPIC_API_KEY` | console.anthropic.com |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | GCP project with Maps JavaScript API enabled + billing |
 
-## Learn More
+Ask William for shared dev credentials rather than provisioning your own Supabase/GCP project, unless you're intentionally working against an isolated instance.
 
-To learn more about Next.js, take a look at the following resources:
+`NEXT_PUBLIC_*` vars are inlined at build time — restart `pnpm dev` after changing `.env.local`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Common commands
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+pnpm dev             # start dev server (localhost:3000)
+pnpm build           # production build
+pnpm start           # run the production build
+pnpm lint            # eslint
+pnpm test            # run all tests (vitest)
+pnpm test -- <file>  # run one test file, e.g. pnpm test -- chat-create.test.ts
+```
 
-## Deploy on Vercel
+## Database
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Supabase migrations live in `supabase/migrations`. Apply them via the Supabase CLI or by pasting into the SQL editor of your Supabase project — ask William which is set up for this hackathon's shared project.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Working on this repo
+
+Read [`CLAUDE.md`](./CLAUDE.md) before starting any task — it defines the execution rules (scope boundaries, commit format, when to stop and ask). If you're using Claude Code, it's picked up automatically; read it yourself either way.
+
+For parallel work, see [`AGENT.md`](./AGENT.md) for the git worktree workflow.
