@@ -44,14 +44,19 @@ export default async function BoardPage() {
   const weekAgo = getWeekAgoIso();
   const activeCutoff = listingActiveCutoffIso();
 
+  // "Just Shared" is what *other* neighbours are offering - the viewer's own
+  // listings live in "Your Shares" below, so they're filtered out here.
+  let justSharedQuery = supabase
+    .from("listings")
+    .select("id, name, description, photo_url, owner_id, recommend_score, status")
+    .gte("created_at", activeCutoff)
+    .order("created_at", { ascending: false })
+    .limit(5);
+  if (user) justSharedQuery = justSharedQuery.neq("owner_id", user.id);
+
   const [{ data: justShared }, { data: yourShares }, { count: weeklyShareCount }] =
     await Promise.all([
-      supabase
-        .from("listings")
-        .select("id, name, description, photo_url, owner_id, recommend_score, status")
-        .gte("created_at", activeCutoff)
-        .order("created_at", { ascending: false })
-        .limit(5),
+      justSharedQuery,
       user
         ? supabase
             .from("listings")
@@ -129,9 +134,6 @@ export default async function BoardPage() {
             <h2 className="font-heading text-sm tracking-wide uppercase">
               Your Shares
             </h2>
-            <span className="text-xs font-medium text-muted-foreground">
-              Auto-removed after 48h
-            </span>
           </div>
           <YourShares listings={yourShares} />
         </section>

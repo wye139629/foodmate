@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase-auth";
+import { isListingExpired } from "@/lib/listing-status";
 import SignOutButton from "@/components/SignOutButton";
 import BottomNav from "@/components/BottomNav";
+import ListingStatusToggle from "@/components/ListingStatusToggle";
 
 function initialsFor(name: string) {
   return name.slice(0, 2).toUpperCase();
@@ -28,14 +30,20 @@ export default async function ProfilePage() {
     user
       ? supabase
           .from("listings")
-          .select("id, name, description, photo_url, status, recommend_score")
+          .select("id, name, description, photo_url, status, recommend_score, created_at")
           .eq("owner_id", user.id)
           .order("created_at", { ascending: false })
       : Promise.resolve({ data: [] }),
   ]);
 
   const displayName = profile?.display_name ?? "Guest";
-  const available = (listings ?? []).filter((l) => l.status === "available");
+  // A listing is "live" for 48h after posting (FR-009); expired ones drop off
+  // everywhere, this page included.
+  const available = (listings ?? []).filter(
+    (l) =>
+      (l.status === "available" || l.status === "taken") &&
+      !isListingExpired(l.created_at),
+  );
   const shared = (listings ?? []).filter((l) => l.status === "complete");
 
   return (
@@ -88,46 +96,55 @@ export default async function ProfilePage() {
           </p>
           <div className="-mx-4 border-t border-border bg-card">
             {available.map((listing) => (
-              <Link
+              <div
                 key={listing.id}
-                href={`/listings/${listing.id}`}
                 className="flex items-center gap-4 border-b border-border px-4 py-4"
               >
-                <div className="size-16 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
-                  {listing.photo_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element -- Supabase Storage URL, not a static import
-                    <img
-                      src={listing.photo_url}
-                      alt=""
-                      className="size-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex size-full items-center justify-center">
-                      <ShoppingBag className="size-5 text-muted-foreground" />
-                    </div>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-heading text-base font-bold">
-                    {listing.name}
-                  </p>
-                  {listing.description && (
-                    <p className="mt-0.5 truncate text-sm font-medium text-muted-foreground">
-                      {listing.description}
-                    </p>
-                  )}
-                  <div className="mt-1.5 flex items-center gap-2">
-                    <span className="rounded-md border border-border px-2 py-0.5 text-xs font-medium">
-                      Available
-                    </span>
-                    {listing.recommend_score !== null && (
-                      <span className="text-xs font-medium text-muted-foreground">
-                        ⭐ {listing.recommend_score}/10
-                      </span>
+                <Link
+                  href={`/listings/${listing.id}`}
+                  className="flex min-w-0 flex-1 items-center gap-4"
+                >
+                  <div className="size-16 shrink-0 overflow-hidden rounded-lg border border-border bg-muted">
+                    {listing.photo_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- Supabase Storage URL, not a static import
+                      <img
+                        src={listing.photo_url}
+                        alt=""
+                        className="size-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex size-full items-center justify-center">
+                        <ShoppingBag className="size-5 text-muted-foreground" />
+                      </div>
                     )}
                   </div>
-                </div>
-              </Link>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-heading text-base font-bold">
+                      {listing.name}
+                    </p>
+                    {listing.description && (
+                      <p className="mt-0.5 truncate text-sm font-medium text-muted-foreground">
+                        {listing.description}
+                      </p>
+                    )}
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <span className="rounded-md border border-border px-2 py-0.5 text-xs font-medium">
+                        {listing.status === "taken" ? "Taken" : "Available"}
+                      </span>
+                      {listing.recommend_score !== null && (
+                        <span className="text-xs font-medium text-muted-foreground">
+                          ⭐ {listing.recommend_score}/10
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+                <ListingStatusToggle
+                  listingId={listing.id}
+                  initialStatus={listing.status}
+                  className="shrink-0"
+                />
+              </div>
             ))}
           </div>
         </div>
