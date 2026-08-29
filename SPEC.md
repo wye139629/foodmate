@@ -106,9 +106,9 @@ User logs in → creates a shareable food listing (with location) → another us
 
 - [RESOLVED] Google Maps API key: obtained, wired into `.env.local` / Vercel as `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`.
 - [RESOLVED] Anthropic API key (for FR-002b's fridge scan): obtained, wired into `.env.local` / Vercel as `ANTHROPIC_API_KEY` (server-only, not `NEXT_PUBLIC_`).
-- [NEEDS CLARIFICATION: Is the user's location fetched live each time (asked every time the map opens), or set as a fixed location in the profile? Recommend "fetch current location every time the map opens" for the MVP — simpler]
+- [RESOLVED] User location: fetched live via the browser Geolocation API every time the map opens (no stored/fixed profile location).
 - [NEEDS CLARIFICATION: Does the chat room need a notification mechanism (alert on new message)? For P1, recommend skipping push notifications — the user checks the chat room manually]
-- [NEEDS CLARIFICATION: What distance threshold defines "nearby"? Also, test accounts and mock data need to be prepared in advance with realistic spread to verify the map display works well for the demo]
+- [RESOLVED] "Nearby" distance: user-selectable radius (a control on the map page — 5 / 10 / 25 / 50 km presets, default 10 km), rather than one fixed threshold. This pulls a slice of FR-007 (P2, distance filter) forward into FR-003 at William's request. Test accounts/mock data with a realistic spread still need to be prepared before the demo.
 
 ## 8. Definition of Done (termination condition for agents)
 

@@ -51,13 +51,14 @@
 
 - **Prerequisite**: T001 complete (no dependency on T002's form UI — only needs the `listings` table structure, so it can be developed in parallel using mock data)
 - **What**:
-  - Integrate the Google Maps JavaScript API, display the map, and get the user's current location (browser Geolocation API)
-  - Create `/app/api/listings/nearby` route: takes the user's lat/lng, uses the Haversine formula to compute distance, returns "available" listings within range
+  - Integrate the Google Maps JavaScript API, display the map, and get the user's current location (browser Geolocation API), fetched live every time the map opens
+  - Create `/app/api/listings/nearby` route: takes the user's lat/lng and a `radiusKm` query param, uses the Haversine formula to compute distance, returns "available" listings within range (default `radiusKm=10` if omitted)
+  - Add a radius selector on the map page (5 / 10 / 25 / 50 km presets, default 10 km — pulled forward from FR-007 at William's request) that re-queries on change
   - Show item markers on the map; clicking a marker shows its details
-- **File scope**: `/components/MapView.tsx`, `/app/api/listings/nearby/route.ts`, `/lib/geo-distance.ts`
+- **File scope**: `/components/MapView.tsx`, `/app/api/listings/nearby/route.ts`, `/lib/geo-distance.ts`, `/app/map/page.tsx`
 - **Test commands**:
-  - `npm test -- geo-distance.test.ts` (verify the Haversine distance formula's correctness against known lat/lng pairs with known reference distances)
-  - `npm test -- nearby-listings.test.ts` (mock the database returning multiple listings at various distances, verify the API correctly includes in-range items and excludes out-of-range ones)
+  - `pnpm test -- geo-distance.test.ts` (verify the Haversine distance formula's correctness against known lat/lng pairs with known reference distances)
+  - `pnpm test -- nearby-listings.test.ts` (mock the database returning multiple listings at various distances, verify the API correctly includes in-range items and excludes out-of-range ones for a given radius; verify the default radius applies when omitted; verify an unauthenticated request is rejected)
 - **Acceptance mapping**: SPEC_food_sharing.md FR-003, Acceptance Overview "map markers must correspond to real lat/lng data"
 - **Commit message**: `feat(FR-003): map showing nearby shareable listings`
 - **Rollback**: `git revert <commit-hash>`
