@@ -1,38 +1,32 @@
 import Link from "next/link";
-import { Map, Plus, UserRound } from "lucide-react";
+import { Map as MapIcon, UserRound } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase-auth";
 import SignOutButton from "@/components/SignOutButton";
 import BottomNav from "@/components/BottomNav";
+import PostRequestButton from "@/components/PostRequestButton";
 
-// ponytail: mock data until this screen reads real listings/requests
-const STATS = {
-  count: 42,
-  caption: "Neighbors met and shared food locally.",
-};
+function initialsFor(name: string) {
+  return name.slice(0, 2).toUpperCase();
+}
 
-const JUST_SHARED = [
-  {
-    id: "1",
-    title: "Half a Pepperoni Pizza",
-    description: "Ordered too much! Still in the box, untouched on one side.",
-    photoUrl: "https://picsum.photos/seed/pizza/200/200",
-    ownerName: "Maria S.",
-    ownerInitials: "MA",
-  },
-  {
-    id: "2",
-    title: "Chicken Curry & Roti",
-    description: "Got a huge portion for takeout. Happy to share the extra curry.",
-    photoUrl: "https://picsum.photos/seed/curry/200/200",
-    ownerName: "Tom W.",
-    ownerInitials: "TO",
-  },
-];
+// ponytail: no completed_at column exists yet, so "this week" uses
+// created_at as a proxy — swap for a real completion timestamp if the
+// gap between "listed" and "completed" ever matters for this stat.
+function getWeekAgoIso(): string {
+  return new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+}
 
-const LOOKING_FOR = [
-  { id: "1", title: "2 eggs for baking", requesterName: "Ji-ho P.", requesterInitials: "JI" },
-  { id: "2", title: "A bit of flour (approx 100g)", requesterName: "David C.", requesterInitials: "DA" },
-];
+async function getDisplayNames(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  ids: string[],
+) {
+  if (ids.length === 0) return new Map<string, string>();
+  const { data } = await supabase
+    .from("profiles")
+    .select("id, display_name")
+    .in("id", ids);
+  return new Map((data ?? []).map((row) => [row.id, row.display_name as string]));
+}
 
 export default async function BoardPage() {
   const supabase = await createServerSupabaseClient();
@@ -42,6 +36,32 @@ export default async function BoardPage() {
 
   const email = user?.email ?? "Guest";
   const initial = email.charAt(0).toUpperCase();
+
+  const weekAgo = getWeekAgoIso();
+
+  const [{ data: justShared }, { data: lookingFor }, { count: weeklyShareCount }] =
+    await Promise.all([
+      supabase
+        .from("listings")
+        .select("id, name, description, photo_url, owner_id")
+        .order("created_at", { ascending: false })
+        .limit(5),
+      supabase
+        .from("requests")
+        .select("id, item_name, requester_id")
+        .order("created_at", { ascending: false })
+        .limit(5),
+      supabase
+        .from("listings")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "complete")
+        .gte("created_at", weekAgo),
+    ]);
+
+  const names = await getDisplayNames(supabase, [
+    ...(justShared ?? []).map((l) => l.owner_id),
+    ...(lookingFor ?? []).map((r) => r.requester_id),
+  ]);
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-sm flex-col px-4 pt-12 pb-24">
@@ -67,8 +87,8 @@ export default async function BoardPage() {
           </span>
         </div>
         <div className="mt-8">
-          <p className="font-heading text-6xl tracking-tight">{STATS.count}</p>
-          <p className="mt-3 text-lg font-bold">{STATS.caption}</p>
+          <p className="font-heading text-6xl tracking-tight">{weeklyShareCount ?? 0}</p>
+          <p className="mt-3 text-lg font-bold">Neighbors met and shared food locally.</p>
         </div>
       </section>
 
@@ -79,61 +99,79 @@ export default async function BoardPage() {
             href="/map"
             className="flex size-8 items-center justify-center rounded-full border border-border bg-muted"
           >
-            <Map className="size-4" />
+            <MapIcon className="size-4" />
           </Link>
         </div>
-        <ul className="mt-3 flex flex-col gap-4">
-          {JUST_SHARED.map((item) => (
-            <li
-              key={item.id}
-              className="flex overflow-hidden rounded-lg border-2 border-border bg-card"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element -- mock photo, not a Supabase-hosted listing photo */}
-              <img
-                src={item.photoUrl}
-                alt=""
-                className="h-[140px] w-[130px] shrink-0 border-r-2 border-border object-cover"
-              />
-              <div className="flex flex-1 flex-col justify-between p-3">
-                <div>
-                  <p className="font-heading text-base">{item.title}</p>
-                  <p className="mt-1 text-sm font-medium">{item.description}</p>
-                </div>
-                <div className="flex items-center gap-2 pt-2">
-                  <span className="flex size-6 items-center justify-center rounded-full border border-border bg-muted text-xs font-bold">
-                    {item.ownerInitials}
-                  </span>
-                  <span className="text-sm font-bold">{item.ownerName}</span>
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
+        {justShared && justShared.length > 0 ? (
+          <ul className="mt-3 flex flex-col gap-4">
+            {justShared.map((item) => {
+              const ownerName = names.get(item.owner_id) ?? "A neighbor";
+              return (
+                <li
+                  key={item.id}
+                  className="flex overflow-hidden rounded-lg border-2 border-border bg-card"
+                >
+                  {item.photo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- Supabase Storage URL, not a static import
+                    <img
+                      src={item.photo_url}
+                      alt=""
+                      className="h-[140px] w-[130px] shrink-0 border-r-2 border-border object-cover"
+                    />
+                  ) : (
+                    <div className="h-[140px] w-[130px] shrink-0 border-r-2 border-border bg-muted" />
+                  )}
+                  <div className="flex flex-1 flex-col justify-between p-3">
+                    <div>
+                      <p className="font-heading text-base">{item.name}</p>
+                      {item.description && (
+                        <p className="mt-1 text-sm font-medium">{item.description}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 pt-2">
+                      <span className="flex size-6 items-center justify-center rounded-full border border-border bg-muted text-xs font-bold">
+                        {initialsFor(ownerName)}
+                      </span>
+                      <span className="text-sm font-bold">{ownerName}</span>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="mt-3 text-sm text-muted-foreground">No shares yet — be the first!</p>
+        )}
       </section>
 
       <section className="mt-8">
         <div className="flex items-center justify-between border-b-2 border-border pb-2">
           <h2 className="font-heading text-sm tracking-wide uppercase">Looking For</h2>
-          <button className="flex size-8 items-center justify-center rounded-full border border-border bg-muted">
-            <Plus className="size-4" />
-          </button>
+          <PostRequestButton />
         </div>
-        <ul className="mt-3 flex flex-col gap-3">
-          {LOOKING_FOR.map((item) => (
-            <li
-              key={item.id}
-              className="rounded-lg border-2 border-dashed border-border bg-card/50 p-4"
-            >
-              <p className="font-heading text-base">{item.title}</p>
-              <div className="mt-3 flex items-center gap-2 border-t border-dashed border-border/50 pt-3">
-                <span className="flex size-6 items-center justify-center rounded-full border border-border bg-muted text-xs font-bold">
-                  {item.requesterInitials}
-                </span>
-                <span className="text-sm font-bold">{item.requesterName}</span>
-              </div>
-            </li>
-          ))}
-        </ul>
+        {lookingFor && lookingFor.length > 0 ? (
+          <ul className="mt-3 flex flex-col gap-3">
+            {lookingFor.map((item) => {
+              const requesterName = names.get(item.requester_id) ?? "A neighbor";
+              return (
+                <li
+                  key={item.id}
+                  className="rounded-lg border-2 border-dashed border-border bg-card/50 p-4"
+                >
+                  <p className="font-heading text-base">{item.item_name}</p>
+                  <div className="mt-3 flex items-center gap-2 border-t border-dashed border-border/50 pt-3">
+                    <span className="flex size-6 items-center justify-center rounded-full border border-border bg-muted text-xs font-bold">
+                      {initialsFor(requesterName)}
+                    </span>
+                    <span className="text-sm font-bold">{requesterName}</span>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="mt-3 text-sm text-muted-foreground">No requests yet.</p>
+        )}
       </section>
 
       <BottomNav unreadChats={1} />
