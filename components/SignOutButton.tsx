@@ -5,7 +5,13 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase-auth";
 import { Button } from "@/components/ui/button";
 
-export default function SignOutButton() {
+export default function SignOutButton({
+  children,
+  className,
+}: {
+  children?: React.ReactNode;
+  className?: string;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -22,9 +28,9 @@ export default function SignOutButton() {
       variant="outline"
       onClick={handleSignOut}
       disabled={loading}
-      className="h-9 rounded px-3 text-sm font-semibold"
+      className={className ?? "h-9 rounded px-3 text-sm font-semibold"}
     >
-      {loading ? "Signing out…" : "Log out"}
+      {loading ? "…" : (children ?? "Log out")}
     </Button>
   );
 }
