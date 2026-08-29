@@ -59,6 +59,16 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${bodyFont.variable} ${displayFont.variable}`}>
+      <head>
+        {/* Next's Metadata API dedupes this against the newer, unprefixed
+            mobile-web-app-capable tag it already emits from appleWebApp —
+            it silently drops this one if set via `other`. Older iOS Safari
+            (exactly what apple-touch-startup-image above targets) only
+            recognizes the apple-prefixed tag; without it those devices may
+            not launch in standalone mode at all, so the splash images never
+            get a chance to show regardless of how correct they are. */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+      </head>
       <body>
         <ServiceWorkerRegister />
         {children}
