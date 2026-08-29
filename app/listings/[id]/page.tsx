@@ -133,13 +133,21 @@ export default async function ListingDetailPage({
               This is your listing
             </p>
           ) : (
-            <Button asChild className="h-14 w-full text-base">
+            <div className="flex flex-col gap-2">
+              <Button asChild className="h-14 w-full text-base">
+                <Link
+                  href={`/chat/new?ownerId=${listing.owner_id}&listingId=${listing.id}`}
+                >
+                  Chat with {sharerName.split(" ")[0]}
+                </Link>
+              </Button>
               <Link
-                href={`/chat/new?ownerId=${listing.owner_id}&listingId=${listing.id}`}
+                href={`/feedback?listingId=${listing.id}`}
+                className="text-center text-xs font-bold text-muted-foreground underline underline-offset-2"
               >
-                Chat with {sharerName.split(" ")[0]}
+                Already met up? Leave feedback
               </Link>
-            </Button>
+            </div>
           )}
         </div>
       </div>

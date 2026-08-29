@@ -1,3 +1,4 @@
+import Link from "next/link";
 import ChatWindow from "@/components/ChatWindow";
 import BackButton from "@/components/BackButton";
 import { createServerSupabaseClient } from "@/lib/supabase-auth";
@@ -50,7 +51,15 @@ export default async function ChatPage({
     <div className="flex h-screen flex-col bg-background">
       <header className="flex shrink-0 items-center gap-3 border-b border-border/40 bg-background px-4 py-3">
         <BackButton />
-        <h1 className="text-lg font-semibold">{otherName}</h1>
+        <h1 className="min-w-0 flex-1 truncate text-lg font-semibold">
+          {otherName}
+        </h1>
+        <Link
+          href={`/feedback?chatId=${chatId}`}
+          className="shrink-0 rounded-full border border-border bg-secondary px-3 py-1.5 text-[12px] font-semibold"
+        >
+          Feedback
+        </Link>
       </header>
 
       <div className="flex flex-col gap-3 px-4 pt-3">

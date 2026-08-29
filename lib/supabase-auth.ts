@@ -64,6 +64,7 @@ const PROTECTED_PATH_PREFIXES = [
   "/listings",
   "/chat",
   "/board",
+  "/feedback",
   "/onboarding",
   "/profile",
 ];

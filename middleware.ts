@@ -51,6 +51,7 @@ export const config = {
     "/listings/:path*",
     "/chat/:path*",
     "/board/:path*",
+    "/feedback/:path*",
     "/onboarding/:path*",
     "/profile/:path*",
   ],
