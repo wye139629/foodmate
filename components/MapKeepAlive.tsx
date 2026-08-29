@@ -39,7 +39,7 @@ export default function MapKeepAlive() {
         <h1 className="font-heading text-xl">Map Discovery</h1>
         <Link
           href="/profile"
-          className="flex size-6 items-center justify-center rounded-full border-2 border-border bg-muted text-xs font-medium"
+          className="flex size-8 items-center justify-center rounded-full border border-border bg-muted text-sm font-medium"
         >
           {initial}
         </Link>
