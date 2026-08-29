@@ -40,6 +40,15 @@ describe("auth middleware", () => {
     expect(response.headers.get("location")).toBeNull();
   });
 
+  it("redirects a non-logged-in user away from /board to /login", async () => {
+    getUser.mockResolvedValue({ data: { user: null } });
+
+    const response = await middleware(makeRequest("/board"));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toContain("/login");
+  });
+
   it("does not gate public routes like /login", async () => {
     const response = await middleware(makeRequest("/login"));
 

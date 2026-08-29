@@ -59,7 +59,7 @@ export function createMiddlewareSupabaseClient(
 }
 
 /** Routes that require a logged-in user (SPEC.md Section 3). */
-const PROTECTED_PATH_PREFIXES = ["/map", "/listings", "/chat"];
+const PROTECTED_PATH_PREFIXES = ["/map", "/listings", "/chat", "/board"];
 
 export function isProtectedPath(pathname: string): boolean {
   return PROTECTED_PATH_PREFIXES.some(
