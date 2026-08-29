@@ -63,6 +63,8 @@
 - **Commit message**: `feat(FR-003): map showing nearby shareable listings`
 - **Rollback**: `git revert <commit-hash>`
 
+> **Revision (William, 2026-08-29):** refined against a second Figma reference (node 8:291). Adds a real category filter (pulls another slice of FR-007 forward, same reasoning as the radius selector): `category` column on `listings` (nullable, one of Korean/Italian/Chinese/Western/Mexican/Thai/Dessert/Other), a picker on `ListingForm.tsx`, `category` query param on `/api/listings/nearby`, and a filter pill row on the map. Markers become rotated photo-thumbnail cards instead of icon bubbles; "Share Food" moves to bottom-right. File scope extends to `supabase/migrations/*_listings_category.sql` and `/components/ListingForm.tsx` (extend, do not rewrite).
+
 ---
 
 ## T004｜FR-004 1-on-1 Chat Request

@@ -61,6 +61,7 @@ User logs in → creates a shareable food listing (with location) → another us
 - **Given** the user is logged in and has granted browser location access
 - **When** the user opens the map page
 - **Then** Google Maps shows markers, centered on the user's current location, for all "available" listings nearby — clicking a marker shows the item's details
+- **Also**: a category filter row (Korean / Italian / Chinese / Western / Mexican / Thai / Dessert / Other, plus "All") narrows the markers and the listing strip to that category — this pulls a slice of FR-007 (P2, listing filter) forward at William's request, same as the radius selector. `category` is optional on a listing; uncategorized listings only show under "All".
 
 **FR-004｜1-on-1 chat request**
 - **Given** the user sees a listing of interest on the map or in a list
