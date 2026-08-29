@@ -291,7 +291,7 @@ export default function MapView({
       )}
 
       {selectedGroup && (
-        <div className="absolute inset-x-0 bottom-16 z-20 rounded-t-2xl border-2 border-b-0 border-border bg-card shadow-[0_-4px_0_var(--border)]">
+        <div className="absolute inset-x-0 bottom-0 z-20 rounded-t-2xl border-2 border-b-0 border-border bg-card shadow-[0_-4px_0_var(--border)]">
           <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-border" />
           <div className="flex items-center justify-between px-4 pt-3 pb-2">
             <h2 className="font-heading text-lg">
