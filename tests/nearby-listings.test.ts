@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getUser = vi.fn();
 const eq = vi.fn();
+const neq = vi.fn();
+const gte = vi.fn();
 const select = vi.fn();
 const from = vi.fn(() => ({ select }));
 
@@ -23,15 +25,19 @@ const NEAR = { id: "near", lat: 0.05, lng: 0, name: "Near", category: "Korean" }
 const MID = { id: "mid", lat: 0.2, lng: 0, name: "Mid", category: "Italian" }; // ~22.2km
 const FAR = { id: "far", lat: 1.0, lng: 0, name: "Far", category: null }; // ~111km
 
-// The route chains .eq() 1-2 times then awaits the query builder itself
+// The route chains .neq()/.gte()/.eq() then awaits the query builder itself
 // (matching supabase-js's thenable query builder).
 function setupQuery(data: unknown[]) {
   const builder = {
     eq,
+    neq,
+    gte,
     then: (resolve: (value: { data: unknown; error: null }) => void) =>
       resolve({ data, error: null }),
   };
   eq.mockReturnValue(builder);
+  neq.mockReturnValue(builder);
+  gte.mockReturnValue(builder);
   select.mockReturnValue(builder);
 }
 
@@ -47,6 +53,8 @@ describe("GET /api/listings/nearby", () => {
   beforeEach(() => {
     getUser.mockReset();
     eq.mockReset();
+    neq.mockReset();
+    gte.mockReset();
     select.mockReset();
     from.mockClear();
   });
@@ -120,14 +128,15 @@ describe("GET /api/listings/nearby", () => {
     ]);
   });
 
-  it("only queries available listings", async () => {
+  it("excludes completed listings and applies the 48h active-window cutoff", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
     setupQuery([]);
 
     await GET(makeRequest({ lat: String(CENTER_LAT), lng: String(CENTER_LNG) }));
 
     expect(select).toHaveBeenCalledWith("*");
-    expect(eq).toHaveBeenCalledWith("status", "available");
+    expect(neq).toHaveBeenCalledWith("status", "complete");
+    expect(gte).toHaveBeenCalledWith("created_at", expect.any(String));
   });
 
   it("filters by category when one is given", async () => {

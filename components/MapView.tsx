@@ -16,6 +16,7 @@ interface Listing {
   description: string | null;
   photo_url: string | null;
   category: ListingCategory | null;
+  status: string;
   lat: number;
   lng: number;
   distanceKm: number;
@@ -379,6 +380,7 @@ export default function MapView({
       const first = group[0];
       const rotation = rotationFor(first.id);
       const isOwn = group.some((listing) => listing.owner_id === currentUserId);
+      const allTaken = group.every((listing) => listing.status === "taken");
 
       const el = document.createElement("div");
       el.className = "relative size-14";
@@ -395,9 +397,19 @@ export default function MapView({
       card.className = cn(
         "absolute inset-0 flex items-center justify-center overflow-hidden rounded-[10px] border-2 border-border shadow-[3px_3px_0_var(--border)]",
         isOwn ? "bg-accent" : "bg-card",
+        allTaken && "opacity-55 grayscale",
       );
       card.style.transform = `rotate(${rotation}deg)`;
       el.appendChild(card);
+
+      if (allTaken) {
+        const takenBadge = document.createElement("div");
+        takenBadge.className =
+          "absolute -bottom-2 left-1/2 rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-bold tracking-wide uppercase shadow-[1px_1px_0_var(--border)]";
+        takenBadge.style.transform = `translateX(-50%) rotate(${-rotation}deg)`;
+        takenBadge.textContent = "Taken";
+        el.appendChild(takenBadge);
+      }
 
       if (first.photo_url) {
         const img = document.createElement("img");
@@ -542,9 +554,16 @@ export default function MapView({
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-heading text-base">
-                      {listing.name}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="truncate font-heading text-base">
+                        {listing.name}
+                      </p>
+                      {listing.status === "taken" && (
+                        <span className="shrink-0 rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] font-bold tracking-wide uppercase">
+                          Taken
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-muted-foreground">
                       {listing.distanceKm.toFixed(1)} km ·{" "}
                       {timeAgo(listing.created_at)}

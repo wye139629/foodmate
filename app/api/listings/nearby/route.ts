@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase-auth";
 import { haversineDistanceKm } from "@/lib/geo-distance";
 import { isListingCategory } from "@/lib/listing-categories";
+import { listingActiveCutoffIso } from "@/lib/listing-status";
 
 const DEFAULT_RADIUS_KM = 10;
 
@@ -51,7 +52,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Invalid category" }, { status: 400 });
   }
 
-  let query = supabase.from("listings").select("*").eq("status", "available");
+  // Show "available" and "taken" listings from the last 48h (FR-009 auto-delist).
+  // "taken" still renders on the map with a badge so a requester can see it was
+  // claimed rather than wondering where it went. "complete" is excluded.
+  let query = supabase
+    .from("listings")
+    .select("*")
+    .neq("status", "complete")
+    .gte("created_at", listingActiveCutoffIso());
   if (categoryParam !== null) {
     query = query.eq("category", categoryParam);
   }

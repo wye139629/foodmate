@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Map as MapIcon, UserRound } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase-auth";
+import { listingActiveCutoffIso } from "@/lib/listing-status";
 import BottomNav from "@/components/BottomNav";
+import YourShares from "@/components/YourShares";
 
 function initialsFor(name: string) {
   return name.slice(0, 2).toUpperCase();
@@ -40,19 +42,30 @@ export default async function BoardPage() {
   const initial = email.charAt(0).toUpperCase();
 
   const weekAgo = getWeekAgoIso();
+  const activeCutoff = listingActiveCutoffIso();
 
-  const [{ data: justShared }, { count: weeklyShareCount }] = await Promise.all([
-    supabase
-      .from("listings")
-      .select("id, name, description, photo_url, owner_id, recommend_score")
-      .order("created_at", { ascending: false })
-      .limit(5),
-    supabase
-      .from("listings")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "complete")
-      .gte("created_at", weekAgo),
-  ]);
+  const [{ data: justShared }, { data: yourShares }, { count: weeklyShareCount }] =
+    await Promise.all([
+      supabase
+        .from("listings")
+        .select("id, name, description, photo_url, owner_id, recommend_score, status")
+        .gte("created_at", activeCutoff)
+        .order("created_at", { ascending: false })
+        .limit(5),
+      user
+        ? supabase
+            .from("listings")
+            .select("id, name, photo_url, status, created_at")
+            .eq("owner_id", user.id)
+            .gte("created_at", activeCutoff)
+            .order("created_at", { ascending: false })
+        : Promise.resolve({ data: [] as never[] }),
+      supabase
+        .from("listings")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "complete")
+        .gte("created_at", weekAgo),
+    ]);
 
   const names = await getDisplayNames(
     supabase,
@@ -110,6 +123,20 @@ export default async function BoardPage() {
         </div>
       </section>
 
+      {yourShares && yourShares.length > 0 && (
+        <section className="mt-8">
+          <div className="flex items-center justify-between border-b-2 border-border pb-2">
+            <h2 className="font-heading text-sm tracking-wide uppercase">
+              Your Shares
+            </h2>
+            <span className="text-xs font-medium text-muted-foreground">
+              Auto-removed after 48h
+            </span>
+          </div>
+          <YourShares listings={yourShares} />
+        </section>
+      )}
+
       <section className="mt-8">
         <div className="flex items-center justify-between border-b-2 border-border pb-2">
           <h2 className="font-heading text-sm tracking-wide uppercase">Just Shared</h2>
@@ -142,7 +169,14 @@ export default async function BoardPage() {
                     )}
                     <div className="flex min-w-0 flex-1 flex-col justify-between p-3">
                       <div className="min-w-0">
-                        <p className="truncate font-heading text-base">{item.name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="truncate font-heading text-base">{item.name}</p>
+                          {item.status === "taken" && (
+                            <span className="shrink-0 rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] font-bold tracking-wide uppercase">
+                              Taken
+                            </span>
+                          )}
+                        </div>
                         {item.description && (
                           <p className="mt-1 line-clamp-2 text-sm font-medium">
                             {item.description}

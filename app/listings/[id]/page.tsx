@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ShoppingBag } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase-auth";
+import { isListingExpired } from "@/lib/listing-status";
 import BackButton from "@/components/BackButton";
 import { Button } from "@/components/ui/button";
 
@@ -37,10 +38,12 @@ export default async function ListingDetailPage({
   ]);
   const user = session?.user;
 
-  if (!listing) {
+  if (!listing || isListingExpired(listing.created_at)) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">
-        <p className="text-muted-foreground">Listing not found.</p>
+        <p className="text-muted-foreground">
+          {listing ? "This share is no longer available." : "Listing not found."}
+        </p>
         <BackButton />
       </main>
     );
@@ -80,7 +83,14 @@ export default async function ListingDetailPage({
       <div className="flex flex-col gap-6 px-5 pt-6">
         <div>
           <div className="mb-3 flex items-start justify-between gap-3">
-            <h1 className="font-heading text-2xl leading-tight">{listing.name}</h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="font-heading text-2xl leading-tight">{listing.name}</h1>
+              {listing.status === "taken" && (
+                <span className="rounded-full border-2 border-border bg-muted px-2.5 py-0.5 text-xs font-bold tracking-wide uppercase">
+                  Taken
+                </span>
+              )}
+            </div>
             {listing.recommend_score !== null && (
               <span className="shrink-0 rounded-full border-2 border-border bg-secondary px-3 py-1 text-sm font-bold shadow-[2px_2px_0_var(--border)]">
                 ⭐ {listing.recommend_score}/10
