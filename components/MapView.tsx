@@ -370,8 +370,11 @@ export default function MapView({
   useEffect(() => {
     if (!mapReady || !mapRef.current || !window.google) return;
 
-    setSelectedGroup(null);
-
+    // Not clearing selectedGroup here on purpose: this effect also reruns on
+    // routine background position updates (geolocation watchPosition fires
+    // repeatedly on real devices), which would otherwise slam an open item
+    // sheet shut — and its links along with it — mid-tap. The sheet is
+    // closed explicitly instead, only on deliberate filter changes below.
     for (const marker of markersRef.current) {
       marker.map = null;
     }
@@ -445,7 +448,10 @@ export default function MapView({
       <div className="hide-scrollbar absolute top-4 left-0 z-10 flex w-full gap-2.5 overflow-x-auto px-4 pb-2">
         <button
           type="button"
-          onClick={() => setCategory(null)}
+          onClick={() => {
+            setCategory(null);
+            setSelectedGroup(null);
+          }}
           className={cn(
             "shrink-0 rounded-full border-2 border-border px-4 py-2 text-sm font-bold",
             category === null
@@ -459,7 +465,10 @@ export default function MapView({
           <button
             key={option}
             type="button"
-            onClick={() => setCategory(option)}
+            onClick={() => {
+              setCategory(option);
+              setSelectedGroup(null);
+            }}
             className={cn(
               "shrink-0 rounded-full border-2 border-border px-4 py-2 text-sm font-bold",
               category === option
@@ -473,7 +482,10 @@ export default function MapView({
         <label className="flex shrink-0 items-center gap-1.5 rounded-full border-2 border-border bg-card px-4 py-2 text-sm font-bold shadow-[2px_2px_0_var(--border)]">
           <select
             value={radiusKm}
-            onChange={(event) => setRadiusKm(Number(event.target.value))}
+            onChange={(event) => {
+              setRadiusKm(Number(event.target.value));
+              setSelectedGroup(null);
+            }}
             className="bg-transparent"
           >
             {RADIUS_OPTIONS.map((option) => (
