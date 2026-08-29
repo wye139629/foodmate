@@ -24,7 +24,7 @@ User logs in → creates a shareable food listing (with location) → another us
 | Database / Auth | Supabase (Postgres + Auth + Realtime) | Real user identity is required for chat and meetups — Auth is mandatory here, not optional |
 | Realtime chat | Supabase Realtime (Postgres change subscriptions) | No extra WebSocket service needed, consistent with the existing stack |
 | Map | Google Maps JavaScript API | Displays nearby shareable items, gets the user's current location |
-| AI food quality check | Anthropic Claude API (`claude-opus-5`, vision + structured outputs) | Checks a listing photo for visible spoilage before the listing can be created — trust & safety, not a convenience feature |
+| AI food quality check + recommend score | Anthropic Claude API (`claude-opus-5`, vision + structured outputs) | One call checks a listing photo for visible spoilage (hard block, FR-012) and scores freshness/effort 0–10 for public display (informational, FR-013) — trust & safety, not a convenience feature |
 | Deployment | Vercel | git push auto-deploys |
 
 **Non-negotiable rules (constitution-level, agents must not violate):**
@@ -83,6 +83,12 @@ User logs in → creates a shareable food listing (with location) → another us
 - **When** they submit the form
 - **Then** the photo is sent to Claude (vision + structured outputs) to check for visible spoilage/quality issues before the listing is written to the database — a flagged photo blocks submission with a clear reason instead of creating the listing
 
+**FR-013｜AI recommend score**
+- **Given** a user is creating a listing and has attached a photo that passes the FR-012 safety gate
+- **When** the listing is created
+- **Then** the same Claude call additionally scores the listing 0–10 based on how fresh the food looks in the photo and how much effort the description shows, stores the score with the listing, and shows it publicly on that listing's map marker/InfoWindow and board card so other users see it as a trust signal
+- **Note:** this is informational only — a low score never blocks publishing (unlike FR-012's hard block). No photo → no score (`recommend_score` stays null). The score is computed server-side from the already-uploaded photo, never accepted as client input, so a user can't fake their own listing's public trust score.
+
 ### P2 — Do if time allows
 
 **FR-006｜Safety notice display**
@@ -121,6 +127,7 @@ User logs in → creates a shareable food listing (with location) → another us
 - [RESOLVED] FR-002b (AI-assisted fridge scan / batch listing creation) is removed entirely per William's request — code, tests, and the FR itself. The Anthropic integration is repurposed for FR-012's food quality check instead of being dropped.
 - [RESOLVED] FR-011 onboarding scope: safety guidelines + community rules acknowledgment, gating all identity-required pages until completed. Not identity verification, phone number, or other deeper trust mechanisms — those stay out of scope unless raised later.
 - [RESOLVED] FR-012 food quality check: gates listing creation (blocks submission on a flagged photo) rather than being advisory-only. Only runs when a photo is attached — photo stays optional per FR-002.
+- [RESOLVED] FR-013 recommend score (William, 2026-08-29): keeps FR-012's hard block unchanged and adds a score alongside it (not a replacement); score is shown publicly on map/board listing cards (not sharer-only); a low score is informational only and never blocks publishing.
 
 ## 8. Definition of Done (termination condition for agents)
 

@@ -1,10 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const getUser = vi.fn();
 const single = vi.fn();
 const select = vi.fn(() => ({ single }));
 const insert = vi.fn(() => ({ select }));
 const from = vi.fn(() => ({ insert }));
+const parse = vi.fn();
 
 vi.mock("@/lib/supabase-auth", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/supabase-auth")>();
@@ -17,6 +18,12 @@ vi.mock("@/lib/supabase-auth", async (importOriginal) => {
   };
 });
 
+vi.mock("@anthropic-ai/sdk", () => ({
+  default: class {
+    messages = { parse };
+  },
+}));
+
 const { POST } = await import("@/app/api/listings/route");
 
 function makeRequest(body: unknown) {
@@ -26,6 +33,15 @@ function makeRequest(body: unknown) {
   });
 }
 
+function mockPhotoFetch() {
+  return vi.spyOn(globalThis, "fetch").mockResolvedValue(
+    new Response(new Uint8Array([1, 2, 3]), {
+      status: 200,
+      headers: { "content-type": "image/jpeg" },
+    }),
+  );
+}
+
 describe("POST /api/listings", () => {
   beforeEach(() => {
     getUser.mockReset();
@@ -33,6 +49,11 @@ describe("POST /api/listings", () => {
     select.mockClear();
     insert.mockClear();
     from.mockClear();
+    parse.mockReset();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("rejects an unauthenticated request", async () => {
@@ -69,8 +90,15 @@ describe("POST /api/listings", () => {
     expect(response.status).toBe(201);
     expect(from).toHaveBeenCalledWith("listings");
     expect(insert).toHaveBeenCalledWith(
-      expect.objectContaining({ owner_id: "user-1", name: "Eggs", status: "available" }),
+      expect.objectContaining({
+        owner_id: "user-1",
+        name: "Eggs",
+        status: "available",
+        recommend_score: null,
+        recommend_reason: null,
+      }),
     );
+    expect(parse).not.toHaveBeenCalled();
   });
 
   it("rejects an invalid category", async () => {
@@ -99,5 +127,85 @@ describe("POST /api/listings", () => {
     expect(insert).toHaveBeenCalledWith(
       expect.objectContaining({ category: "Korean" }),
     );
+  });
+
+  it("blocks a flagged photo without writing a listing", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    mockPhotoFetch();
+    parse.mockResolvedValue({
+      parsed_output: {
+        safe: false,
+        safetyReason: "Visible mold on the bread",
+        recommendScore: 0,
+        scoreReason: "n/a",
+      },
+    });
+
+    const response = await POST(
+      makeRequest({
+        name: "Bread",
+        photoUrl: "https://storage.example/bread.jpg",
+        lat: 1,
+        lng: 2,
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toBe("Visible mold on the bread");
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("stores the recommend score for a safe photo", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    mockPhotoFetch();
+    parse.mockResolvedValue({
+      parsed_output: {
+        safe: true,
+        safetyReason: null,
+        recommendScore: 8,
+        scoreReason: "Looks fresh and well described",
+      },
+    });
+    single.mockResolvedValue({
+      data: { id: "listing-1", owner_id: "user-1", name: "Kimchi", recommend_score: 8 },
+      error: null,
+    });
+
+    const response = await POST(
+      makeRequest({
+        name: "Kimchi",
+        description: "Fresh batch, made yesterday",
+        photoUrl: "https://storage.example/kimchi.jpg",
+        lat: 1,
+        lng: 2,
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    expect(insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        recommend_score: 8,
+        recommend_reason: "Looks fresh and well described",
+      }),
+    );
+  });
+
+  it("returns a clean error when the Anthropic call fails", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    mockPhotoFetch();
+    parse.mockRejectedValue(new Error("network error"));
+
+    const response = await POST(
+      makeRequest({
+        name: "Kimchi",
+        photoUrl: "https://storage.example/kimchi.jpg",
+        lat: 1,
+        lng: 2,
+      }),
+    );
+
+    expect(response.status).toBe(502);
+    expect(from).not.toHaveBeenCalled();
   });
 });

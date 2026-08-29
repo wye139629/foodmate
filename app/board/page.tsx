@@ -43,7 +43,7 @@ export default async function BoardPage() {
     await Promise.all([
       supabase
         .from("listings")
-        .select("id, name, description, photo_url, owner_id")
+        .select("id, name, description, photo_url, owner_id, recommend_score")
         .order("created_at", { ascending: false })
         .limit(5),
       supabase
@@ -123,7 +123,14 @@ export default async function BoardPage() {
                   )}
                   <div className="flex flex-1 flex-col justify-between p-3">
                     <div>
-                      <p className="font-heading text-base">{item.name}</p>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-heading text-base">{item.name}</p>
+                        {item.recommend_score !== null && (
+                          <span className="shrink-0 rounded-full border border-border bg-secondary px-2 py-0.5 text-xs font-bold text-secondary-foreground">
+                            ⭐ {item.recommend_score}/10
+                          </span>
+                        )}
+                      </div>
                       {item.description && (
                         <p className="mt-1 text-sm font-medium">{item.description}</p>
                       )}

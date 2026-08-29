@@ -20,6 +20,8 @@ interface Listing {
   lng: number;
   distanceKm: number;
   created_at: string;
+  recommend_score: number | null;
+  recommend_reason: string | null;
 }
 
 const RADIUS_OPTIONS = [5, 10, 25, 50];
@@ -202,7 +204,7 @@ export default function MapView({
         const content = group
           .map(
             (listing) =>
-              `<strong>${listing.name}</strong><br/>${listing.description ?? ""}<br/>${listing.distanceKm.toFixed(1)} km away<br/><a href="/chat/new?ownerId=${listing.owner_id}">Contact the sharer</a>`,
+              `<strong>${listing.name}</strong><br/>${listing.description ?? ""}<br/>${listing.distanceKm.toFixed(1)} km away${listing.recommend_score !== null ? `<br/>⭐ Recommend score: ${listing.recommend_score}/10 — ${listing.recommend_reason ?? ""}` : ""}<br/><a href="/chat/new?ownerId=${listing.owner_id}">Contact the sharer</a>`,
           )
           .join("<hr/>");
         infoWindowRef.current?.setContent(content);

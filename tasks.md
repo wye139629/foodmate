@@ -124,6 +124,23 @@
 - **Commit message**: `feat(FR-012): AI food quality check gates listing creation`
 - **Rollback**: `git revert <commit-hash>`
 
+> **Revision (William, 2026-08-29):** superseded by T013 below — `/app/api/listings/check-photo` is deleted and its safety check folded into `/app/api/listings` POST itself, alongside the new recommend score, as a single Claude call. See T013 for why.
+
+## T013｜FR-013 AI Recommend Score
+
+- **Prerequisite**: T012 complete
+- **What**:
+  - Consolidate photo analysis into `/app/api/listings` POST itself (delete `/app/api/listings/check-photo`): when a `photoUrl` is present, fetch it server-side and run one Claude call (vision + structured outputs via Zod) returning both the FR-012 safety verdict and a 0–10 recommend score + one-line reason. Computing this server-side from the already-uploaded photo — not accepting a client-supplied score — matters because the score is public, so a client-supplied value could be faked as a trust signal.
+  - Unsafe → 400, same as before, listing not created. Safe → listing is created with `recommend_score`/`recommend_reason` set; no photo → both stay null.
+  - Schema: add `recommend_score` (smallint, 0–10) and `recommend_reason` (text) to `listings`.
+  - Surface the score publicly: `/api/listings/nearby` already returns it (`select("*")`); show it on `MapView.tsx`'s marker InfoWindow and on `app/board/page.tsx`'s "Just Shared" cards (extend, do not rewrite — that page is owned by a parallel work stream).
+  - Restyle `ListingForm.tsx` / `app/listings/new/page.tsx` to the "Share Food" layout (photo tap-area, Item Name, Category, Story/Description, Publish button, back button), keeping the real Supabase-backed submit logic.
+- **File scope**: `/app/api/listings/route.ts` (rewrite), `/app/api/listings/check-photo/*` (delete), `/components/ListingForm.tsx` (rewrite), `/app/listings/new/page.tsx` (rewrite), `/components/MapView.tsx` (extend), `/app/board/page.tsx` (extend), `/supabase/migrations/*_listings_recommend_score.sql`
+- **Test command**: `pnpm test -- listing-create.test.ts` (mock the Anthropic client and photo fetch; verify a flagged photo still blocks with a reason and writes nothing; verify a safe photo stores the score; verify no-photo listings store a null score; verify an Anthropic failure returns a clean error)
+- **Acceptance mapping**: SPEC.md FR-013
+- **Commit message**: `feat(FR-013): AI recommend score shown publicly on listings`
+- **Rollback**: `git revert <commit-hash>`
+
 ---
 
 ## P2 Tasks (only start after all P1 is done and William confirms)
