@@ -24,7 +24,7 @@ User logs in → creates a shareable food listing (with location) → another us
 | Database / Auth | Supabase (Postgres + Auth + Realtime) | Real user identity is required for chat and meetups — Auth is mandatory here, not optional |
 | Realtime chat | Supabase Realtime (Postgres change subscriptions) | No extra WebSocket service needed, consistent with the existing stack |
 | Map | Google Maps JavaScript API | Displays nearby shareable items, gets the user's current location |
-| AI fridge scan | Anthropic Claude API (`claude-opus-5`, vision + structured outputs) | Extracts a list of food/ingredient items from a fridge photo so the user doesn't have to type each one |
+| AI food quality check | Anthropic Claude API (`claude-opus-5`, vision + structured outputs) | Checks a listing photo for visible spoilage before the listing can be created — trust & safety, not a convenience feature |
 | Deployment | Vercel | git push auto-deploys |
 
 **Non-negotiable rules (constitution-level, agents must not violate):**
@@ -32,6 +32,7 @@ User logs in → creates a shareable food listing (with location) → another us
 - Location calculations **must not use PostGIS or complex geo-queries** — for the MVP, use a simple lat/lng distance formula (Haversine) computed at the application layer; do not introduce an additional geo-database package
 - Any screen involving a real-world meetup **must display a safety notice** (recommend meeting in a public place, confirm the other party beforehand) — this is a required UI element, not optional
 - No payment/monetary transaction feature (this is pure sharing, not a marketplace)
+- Trust & Safety is a P1 pillar, not a nice-to-have: every new user must complete onboarding (safety guidelines + community rules) before creating a listing, chatting, or browsing the map. When a listing includes a photo, it must pass an AI food-quality check before the listing is created (photo remains optional per FR-002 — no photo means no check to run)
 
 ## 4. Scope Boundaries (to prevent agents from stepping on each other's files)
 
@@ -56,11 +57,6 @@ User logs in → creates a shareable food listing (with location) → another us
 - **When** the user fills in the food/ingredient they want to share (name, quantity description, optional photo, current location) and submits
 - **Then** the system saves this listing to the database, marks it as "available", and ties it to that user's location
 
-**FR-002b｜AI-assisted fridge scan (batch listing creation)**
-- **Given** the user is logged in and on the "create listing" page
-- **When** the user photographs their fridge and requests an AI scan instead of filling the form by hand
-- **Then** the system sends the photo to Claude (vision + structured outputs), which returns a candidate list of food items (name + quantity/description); the user reviews the list, deselects anything they don't want to share, and submits — each remaining item becomes its own listing (same batch photo, current location, "available" status)
-
 **FR-003｜Map showing nearby shareable items**
 - **Given** the user is logged in and has granted browser location access
 - **When** the user opens the map page
@@ -75,6 +71,16 @@ User logs in → creates a shareable food listing (with location) → another us
 - **Given** both parties have coordinated in chat
 - **When** the sharer (listing owner) marks the listing as "exchange complete"
 - **Then** the listing is removed from the "available" list on the map, its status updates to complete, and both parties see a status update notice in the chat
+
+**FR-011｜Safety-first onboarding**
+- **Given** a user has just signed up (or logs in for the first time without having completed it)
+- **When** they try to reach any identity-required page (map, listing creation, chat)
+- **Then** they're routed through a one-time onboarding flow first — safety guidelines (meet in public, verify the other party) and community rules, with explicit acknowledgment — before landing on the page they wanted; completion is remembered so it never shows again for that user
+
+**FR-012｜AI food quality check**
+- **Given** a user is creating a listing and has attached a photo
+- **When** they submit the form
+- **Then** the photo is sent to Claude (vision + structured outputs) to check for visible spoilage/quality issues before the listing is written to the database — a flagged photo blocks submission with a clear reason instead of creating the listing
 
 ### P2 — Do if time allows
 
@@ -96,8 +102,10 @@ User logs in → creates a shareable food listing (with location) → another us
 
 ## 6. Acceptance Criteria Overview (for the reviewer agent)
 
-- [ ] FR-001~005 all passing = demo-ready (minimum showable bar)
+- [ ] FR-001~005, FR-011, FR-012 all passing = demo-ready (minimum showable bar)
 - [ ] Non-logged-in users must not be able to access listing creation, chat, or contact info (must redirect clearly to the login page — not a blank screen or error)
+- [ ] A user who hasn't completed onboarding must not be able to reach the map, listing creation, or chat — redirected to onboarding first
+- [ ] A listing photo showing visible spoilage must not be allowed to create a listing
 - [ ] Map markers must correspond to real latitude/longitude data — no hardcoded fake data on the map
 - [ ] Chat messages must update in real time (the recipient sees a new message without refreshing the page) — must be verified with an actual test of the Supabase Realtime subscription
 - [ ] Listing status changes (available → complete) must be correctly reflected on the map and for both users
@@ -105,10 +113,13 @@ User logs in → creates a shareable food listing (with location) → another us
 ## 7. Open Questions (must be resolved before implementation)
 
 - [RESOLVED] Google Maps API key: obtained, wired into `.env.local` / Vercel as `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`.
-- [RESOLVED] Anthropic API key (for FR-002b's fridge scan): obtained, wired into `.env.local` / Vercel as `ANTHROPIC_API_KEY` (server-only, not `NEXT_PUBLIC_`).
+- [RESOLVED] Anthropic API key (now powering FR-012's food quality check): obtained, wired into `.env.local` / Vercel as `ANTHROPIC_API_KEY` (server-only, not `NEXT_PUBLIC_`).
 - [RESOLVED] User location: fetched live via the browser Geolocation API every time the map opens (no stored/fixed profile location).
 - [RESOLVED] Chat notifications: none for P1 — no unread badge/alert. Messages still update live within an open chat via Supabase Realtime; the user checks the chat room manually otherwise.
 - [RESOLVED] "Nearby" distance: user-selectable radius (a control on the map page — 5 / 10 / 25 / 50 km presets, default 10 km), rather than one fixed threshold. This pulls a slice of FR-007 (P2, distance filter) forward into FR-003 at William's request. Test accounts/mock data with a realistic spread still need to be prepared before the demo.
+- [RESOLVED] FR-002b (AI-assisted fridge scan / batch listing creation) is removed entirely per William's request — code, tests, and the FR itself. The Anthropic integration is repurposed for FR-012's food quality check instead of being dropped.
+- [RESOLVED] FR-011 onboarding scope: safety guidelines + community rules acknowledgment, gating all identity-required pages until completed. Not identity verification, phone number, or other deeper trust mechanisms — those stay out of scope unless raised later.
+- [RESOLVED] FR-012 food quality check: gates listing creation (blocks submission on a flagged photo) rather than being advisory-only. Only runs when a photo is attached — photo stays optional per FR-002.
 
 ## 8. Definition of Done (termination condition for agents)
 

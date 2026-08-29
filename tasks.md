@@ -29,21 +29,21 @@
 
 ---
 
-## T002｜FR-002 + FR-002b Set Up What You Can Share, incl. AI Fridge Scan (can be developed in parallel with T003 — see plan below)
+## T002｜FR-002 Set Up What You Can Share (can be developed in parallel with T003 — see plan below)
 
 - **Prerequisite**: T001 complete
 - **What**:
   - Build the listing form component (name, quantity description, optional photo upload, auto-fill current lat/lng)
   - Create `/app/api/listings` POST route: saves the listing to the `listings` table, tied to the logged-in user's id, defaulting status to "available"; requires auth (this route is not covered by middleware's page matcher, so it must check the session itself)
   - Add a Supabase Storage bucket for listing photos (migration)
-  - Build the AI fridge-scan flow (FR-002b): a component to capture/upload a fridge photo, `/app/api/listings/scan` POST route that sends the photo to Claude (`claude-opus-5`, vision + structured outputs via Zod) and returns a candidate item list, and a review UI (checklist) that creates one listing per selected item via the existing create route
-- **File scope**: `/components/ListingForm.tsx`, `/components/FridgeScanner.tsx`, `/app/listings/new/page.tsx`, `/app/api/listings/route.ts`, `/app/api/listings/scan/route.ts`, `supabase/migrations/*_listing_photos_bucket.sql`
+- **File scope**: `/components/ListingForm.tsx`, `/app/listings/new/page.tsx`, `/app/api/listings/route.ts`, `supabase/migrations/*_listing_photos_bucket.sql`
 - **Test commands**:
   - `pnpm test -- listing-create.test.ts` (verify form submission correctly calls the API; verify the API correctly writes to the database with owner_id set; verify error handling when lat/lng is missing; verify an unauthenticated request is rejected)
-  - `pnpm test -- fridge-scan.test.ts` (mock the Anthropic client; verify the route returns a parsed item list matching the schema; verify it rejects a request with no photo and an unauthenticated request)
-- **Acceptance mapping**: SPEC.md FR-002, FR-002b
-- **Commit message**: `feat(FR-002): set up shareable listing, incl. AI fridge scan`
+- **Acceptance mapping**: SPEC.md FR-002
+- **Commit message**: `feat(FR-002): set up shareable listing`
 - **Rollback**: `git revert <commit-hash>`
+
+> **Revision (William, 2026-08-29):** T002 originally included an AI-assisted fridge-scan flow (FR-002b: photo → candidate item list → batch-create listings). It was built, then removed entirely at William's request in favor of Trust & Safety work (see T011/T012 below) — `FridgeScanner.tsx`, `/api/listings/scan`, and its tests are deleted, not just hidden.
 
 ---
 
@@ -93,6 +93,33 @@
 - **Test command**: `npm test -- listing-complete.test.ts` (verify a non-owner calling this API is rejected; verify that after the status update, `nearby-listings` no longer returns this listing)
 - **Acceptance mapping**: SPEC_food_sharing.md FR-005, Acceptance Overview "listing status changes must be correctly reflected"
 - **Commit message**: `feat(FR-005): mark meetup as complete`
+- **Rollback**: `git revert <commit-hash>`
+
+---
+
+## T011｜FR-011 Safety-First Onboarding
+
+- **Prerequisite**: T001 complete
+- **What**:
+  - Track onboarding completion per user via Supabase Auth's `user_metadata` (`onboarded: true`) — no new table needed
+  - Build `/app/onboarding/page.tsx`: safety guidelines + community rules, with an explicit acknowledgment action that sets the flag and redirects onward
+  - Extend middleware: a logged-in but not-yet-onboarded user hitting any protected path (`/map`, `/listings`, `/chat`, `/board`) is redirected to `/onboarding` first, instead of straight through
+- **File scope**: `/app/onboarding/page.tsx`, `/middleware.ts`, `/lib/supabase-auth.ts` (extend, do not rewrite)
+- **Test command**: `pnpm test -- onboarding.test.ts` (verify a logged-in, non-onboarded user hitting a protected route is redirected to `/onboarding`; verify an onboarded user is not redirected; verify `/onboarding` itself doesn't redirect-loop)
+- **Acceptance mapping**: SPEC.md FR-011
+- **Commit message**: `feat(FR-011): safety-first onboarding flow`
+- **Rollback**: `git revert <commit-hash>`
+
+## T012｜FR-012 AI Food Quality Check
+
+- **Prerequisite**: T002 complete
+- **What**:
+  - Create `/app/api/listings/check-photo` POST route (auth-checked): sends the photo to Claude (`claude-opus-5`, vision + structured outputs via Zod) and returns whether it looks safe to share plus a reason when it doesn't
+  - Wire into `ListingForm.tsx`: when a photo is attached, run the check before creating the listing; a flagged photo blocks submission and shows the reason instead of silently failing or letting it through
+- **File scope**: `/app/api/listings/check-photo/route.ts`, `/components/ListingForm.tsx` (extend, do not rewrite)
+- **Test command**: `pnpm test -- listing-quality-check.test.ts` (mock the Anthropic client; verify a flagged photo blocks with a reason; verify a clean photo passes; verify an unauthenticated request is rejected)
+- **Acceptance mapping**: SPEC.md FR-012
+- **Commit message**: `feat(FR-012): AI food quality check gates listing creation`
 - **Rollback**: `git revert <commit-hash>`
 
 ---
