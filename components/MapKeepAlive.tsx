@@ -35,7 +35,7 @@ export default function MapKeepAlive() {
       style={{ transform: onMap ? "none" : "translateX(-100%)" }}
       aria-hidden={!onMap}
     >
-      <header className="z-10 flex items-center justify-between border-b-2 border-border bg-card px-4 pt-3 pb-3">
+      <header className="z-10 flex items-center justify-between border-b-2 border-border bg-background px-4 pt-3 pb-3">
         <h1 className="font-heading text-xl">Map Discovery</h1>
         <Link
           href="/profile"
