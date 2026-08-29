@@ -102,4 +102,24 @@ describe("POST /api/chat/open", () => {
       user_id_2: "owner-1",
     });
   });
+
+  it("recovers from a concurrent duplicate insert by refetching the winner", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    maybeSingle
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({
+        data: { id: "chat-1", user_id_1: "owner-1", user_id_2: "user-1" },
+        error: null,
+      });
+    insertSingle.mockResolvedValue({
+      data: null,
+      error: { code: "23505", message: "duplicate key value violates unique constraint" },
+    });
+
+    const response = await POST(makeRequest({ otherUserId: "owner-1" }));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.chat.id).toBe("chat-1");
+  });
 });

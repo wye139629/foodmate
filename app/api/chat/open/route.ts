@@ -55,6 +55,27 @@ export async function POST(request: Request) {
     .single();
 
   if (createError) {
+    // A concurrent request (e.g. a double-fired effect) can win the race
+    // and insert first — the unique index on the pair rejects ours with
+    // 23505. That's not a real failure, just re-fetch what they created.
+    if (createError.code === "23505") {
+      const { data: raceWinner, error: refetchError } = await supabase
+        .from("chats")
+        .select("*")
+        .or(
+          `and(user_id_1.eq.${user.id},user_id_2.eq.${otherUserId}),and(user_id_1.eq.${otherUserId},user_id_2.eq.${user.id})`,
+        )
+        .limit(1)
+        .maybeSingle();
+
+      if (raceWinner) {
+        return NextResponse.json({ chat: raceWinner });
+      }
+      if (refetchError) {
+        return NextResponse.json({ error: refetchError.message }, { status: 500 });
+      }
+    }
+
     return NextResponse.json({ error: createError.message }, { status: 500 });
   }
 

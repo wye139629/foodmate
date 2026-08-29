@@ -67,6 +67,7 @@ User logs in → creates a shareable food listing (with location) → another us
 - **Given** the user sees a listing of interest on the map or in a list
 - **When** the user clicks "Contact the sharer"
 - **Then** the system creates (or opens an existing) 1-on-1 chat room between that user and the sharer, and both can exchange messages in real time (via Supabase Realtime)
+- **Also**: a `/chat` list page shows every chat the user is part of (other person, last message preview, relative time), sorted most-recent-first, fixing the bottom nav's "Chats" tab which previously 404'd (it links to `/chat`, not `/chat/new` or `/chat/[chatId]`, neither of which is a list).
 
 **FR-005｜Mark meetup as complete**
 - **Given** both parties have coordinated in chat
@@ -129,6 +130,7 @@ User logs in → creates a shareable food listing (with location) → another us
 - [RESOLVED] FR-012 food quality check: gates listing creation (blocks submission on a flagged photo) rather than being advisory-only. Only runs when a photo is attached — photo stays optional per FR-002.
 - [RESOLVED] FR-013 recommend score (William, 2026-08-29): keeps FR-012's hard block unchanged and adds a score alongside it (not a replacement); score is shown publicly on map/board listing cards (not sharer-only); a low score is informational only and never blocks publishing.
 - [RESOLVED] FR-003 marker interaction (William, 2026-08-29): replaced the Google Maps InfoWindow with a custom bottom-sheet modal + a real listing detail page (`/listings/[id]`), matching a pasted Figma Make reference. The reference's "Bowl Rating" (completed shares/feedback tags) and "Food Identity" (roots/home/specialties/curious, from onboarding) sections are deferred — William chose the basic version using data we actually collect (photo/name/description/category/score/sharer name & member-since) rather than adding new onboarding fields and trust-tracking schema right now.
+- [RESOLVED] FR-004 chat list (William, 2026-08-29): built the missing `/chat` list page rather than also restyling the individual chat window in this pass (kept as a separate, deferred option). While testing it, found and fixed a real race condition in `/api/chat/open` — a double-fired request (React StrictMode in dev, or any concurrent retry) could create two duplicate chat rows for the same pair of users, since the "does a chat exist" check and the insert weren't atomic. Fixed with a DB-level unique index on the (unordered) user pair plus a 23505-conflict recovery path that refetches the winner instead of erroring.
 
 ## 8. Definition of Done (termination condition for agents)
 

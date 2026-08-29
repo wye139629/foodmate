@@ -84,6 +84,9 @@
 - **Commit message**: `feat(FR-004): 1-on-1 chat feature`
 - **Rollback**: `git revert <commit-hash>`
 
+> **Revision (William, 2026-08-29):** built the missing `/chat` list page (`/app/chat/page.tsx`) — BottomNav's "Chats" tab linked to `/chat`, which had no page, only `/chat/new` and `/chat/[chatId]`. Lists every chat the user is in with the other person's name, a last-message preview (or "Say hello to get started." if none), and relative time, sorted most-recent-first. While testing it, found `/api/chat/open` had a real race — a double-fired request could create two chat rows for the same pair before either insert landed. Fixed with a unique index on `least/greatest(user_id_1, user_id_2)` (`supabase/migrations/*_chats_unique_pair.sql`) and a 23505-conflict recovery path in the route that refetches the winner. Also extracted `timeAgo()` (previously duplicated inline in `MapView.tsx`) to `/lib/time-ago.ts`, now shared by both. File scope: `/app/chat/page.tsx` (new), `/app/api/chat/open/route.ts` (extend), `/lib/time-ago.ts` (new), `/components/MapView.tsx` (extend, do not rewrite), `supabase/migrations/*_chats_unique_pair.sql` (new).
+> **Test command**: `pnpm test -- chat-create.test.ts` (added a case covering the 23505 race-recovery path)
+
 ---
 
 ## T005｜FR-005 Mark Meetup as Complete (integrates T002, T003, T004)
