@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createServerSupabaseClient } from "@/lib/supabase-auth";
 import { timeAgo } from "@/lib/time-ago";
 import BottomNav from "@/components/BottomNav";
+import RatingBadge from "@/components/RatingBadge";
 
 function initialsFor(name: string) {
   return name.slice(0, 2).toUpperCase();
@@ -39,7 +40,10 @@ export default async function ChatListPage() {
           .order("created_at", { ascending: false })
       : Promise.resolve({ data: [] }),
     otherUserIds.length
-      ? supabase.from("profiles").select("id, display_name").in("id", otherUserIds)
+      ? supabase
+          .from("profiles")
+          .select("id, display_name, rating")
+          .in("id", otherUserIds)
       : Promise.resolve({ data: [] }),
   ]);
 
@@ -50,15 +54,22 @@ export default async function ChatListPage() {
     }
   }
 
-  const nameById = new Map((profiles ?? []).map((p) => [p.id, p.display_name]));
+  const profileById = new Map(
+    (profiles ?? []).map((p) => [
+      p.id,
+      { name: p.display_name as string, rating: p.rating as number | null },
+    ]),
+  );
 
   const rows = (chats ?? [])
     .map((chat) => {
       const otherUserId = chat.user_id_1 === user?.id ? chat.user_id_2 : chat.user_id_1;
       const latest = latestByChat.get(chat.id);
+      const other = profileById.get(otherUserId);
       return {
         id: chat.id,
-        otherName: nameById.get(otherUserId) ?? "A neighbor",
+        otherName: other?.name ?? "A neighbor",
+        otherRating: other?.rating ?? null,
         preview: latest?.content ?? "Say hello to get started.",
         timestamp: latest?.created_at ?? chat.created_at,
       };
@@ -89,7 +100,10 @@ export default async function ChatListPage() {
                   {initialsFor(row.otherName)}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="font-heading text-base">{row.otherName}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="truncate font-heading text-base">{row.otherName}</p>
+                    <RatingBadge rating={row.otherRating} />
+                  </div>
                   <p className="truncate text-sm text-muted-foreground">{row.preview}</p>
                 </div>
                 <span className="shrink-0 text-xs font-medium text-muted-foreground">

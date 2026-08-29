@@ -5,6 +5,7 @@ import { isListingExpired } from "@/lib/listing-status";
 import SignOutButton from "@/components/SignOutButton";
 import BottomNav from "@/components/BottomNav";
 import ListingStatusToggle from "@/components/ListingStatusToggle";
+import RatingBadge from "@/components/RatingBadge";
 
 function initialsFor(name: string) {
   return name.slice(0, 2).toUpperCase();
@@ -25,7 +26,11 @@ export default async function ProfilePage() {
 
   const [{ data: profile }, { data: listings }] = await Promise.all([
     user
-      ? supabase.from("profiles").select("display_name, created_at").eq("id", user.id).single()
+      ? supabase
+          .from("profiles")
+          .select("display_name, created_at, rating")
+          .eq("id", user.id)
+          .single()
       : Promise.resolve({ data: null }),
     user
       ? supabase
@@ -54,7 +59,10 @@ export default async function ProfilePage() {
             {initialsFor(displayName)}
           </span>
           <div>
-            <p className="font-heading text-base font-bold">{displayName}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="font-heading text-base font-bold">{displayName}</p>
+              <RatingBadge rating={profile?.rating} />
+            </div>
             {profile?.created_at && (
               <p className="text-sm font-medium text-muted-foreground">
                 Member since {memberSince(profile.created_at)}

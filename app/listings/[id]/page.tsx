@@ -3,6 +3,7 @@ import { ShoppingBag } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase-auth";
 import { isListingExpired } from "@/lib/listing-status";
 import BackButton from "@/components/BackButton";
+import RatingBadge from "@/components/RatingBadge";
 import { Button } from "@/components/ui/button";
 
 function initialsFor(name: string) {
@@ -51,7 +52,7 @@ export default async function ListingDetailPage({
 
   const { data: sharer } = await supabase
     .from("profiles")
-    .select("display_name, created_at")
+    .select("display_name, created_at, rating")
     .eq("id", listing.owner_id)
     .single();
 
@@ -115,7 +116,10 @@ export default async function ListingDetailPage({
               {initialsFor(sharerName)}
             </span>
             <div>
-              <h3 className="font-heading text-lg font-bold">{sharerName}</h3>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-heading text-lg font-bold">{sharerName}</h3>
+                <RatingBadge rating={sharer?.rating} size="lg" />
+              </div>
               {sharer?.created_at && (
                 <p className="text-sm font-medium text-muted-foreground">
                   Neighbour since {memberSince(sharer.created_at)}
@@ -133,21 +137,13 @@ export default async function ListingDetailPage({
               This is your listing
             </p>
           ) : (
-            <div className="flex flex-col gap-2">
-              <Button asChild className="h-14 w-full text-base">
-                <Link
-                  href={`/chat/new?ownerId=${listing.owner_id}&listingId=${listing.id}`}
-                >
-                  Chat with {sharerName.split(" ")[0]}
-                </Link>
-              </Button>
+            <Button asChild className="h-14 w-full text-base">
               <Link
-                href={`/feedback?listingId=${listing.id}`}
-                className="text-center text-xs font-bold text-muted-foreground underline underline-offset-2"
+                href={`/chat/new?ownerId=${listing.owner_id}&listingId=${listing.id}`}
               >
-                Already met up? Leave feedback
+                Chat with {sharerName.split(" ")[0]}
               </Link>
-            </div>
+            </Button>
           )}
         </div>
       </div>

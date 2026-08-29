@@ -80,13 +80,22 @@ describe("POST /api/feedback", () => {
     expect(from).not.toHaveBeenCalled();
   });
 
-  it("rejects a request with no tags", async () => {
+  it("accepts a rating with no tags", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    lookupMaybeSingle.mockResolvedValue({
+      data: { user_id_1: "user-1", user_id_2: "user-2" },
+      error: null,
+    });
+    insertSingle.mockResolvedValue({ data: { id: "fb-3" }, error: null });
 
-    const response = await POST(makeRequest({ chatId: "chat-1", tags: [] }));
+    const response = await POST(
+      makeRequest({ chatId: "chat-1", tags: [], stars: 6 }),
+    );
 
-    expect(response.status).toBe(400);
-    expect(from).not.toHaveBeenCalled();
+    expect(response.status).toBe(201);
+    expect(insert).toHaveBeenCalledWith(
+      expect.objectContaining({ tags: [], stars: 6 }),
+    );
   });
 
   it("rejects more than three tags", async () => {
@@ -134,7 +143,7 @@ describe("POST /api/feedback", () => {
     lookupMaybeSingle.mockResolvedValue({ data: null, error: null });
 
     const response = await POST(
-      makeRequest({ chatId: "chat-x", tags: ["Friendly"] }),
+      makeRequest({ chatId: "chat-x", tags: ["Friendly"], stars: 5 }),
     );
 
     expect(response.status).toBe(404);
@@ -149,7 +158,7 @@ describe("POST /api/feedback", () => {
     });
 
     const response = await POST(
-      makeRequest({ chatId: "chat-1", tags: ["Friendly"] }),
+      makeRequest({ chatId: "chat-1", tags: ["Friendly"], stars: 5 }),
     );
 
     expect(response.status).toBe(403);
@@ -164,11 +173,33 @@ describe("POST /api/feedback", () => {
     });
 
     const response = await POST(
-      makeRequest({ listingId: "listing-1", tags: ["Friendly"] }),
+      makeRequest({ listingId: "listing-1", tags: ["Friendly"], stars: 5 }),
     );
 
     expect(response.status).toBe(400);
     expect(insert).not.toHaveBeenCalled();
+  });
+
+  it("rejects a request with no star rating", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+
+    const response = await POST(
+      makeRequest({ chatId: "chat-1", tags: ["Friendly"] }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("rejects a zero star rating", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+
+    const response = await POST(
+      makeRequest({ chatId: "chat-1", tags: ["Friendly"], stars: 0 }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(from).not.toHaveBeenCalled();
   });
 
   it("writes feedback from a chat with both user ids set and returns 201", async () => {
@@ -187,6 +218,7 @@ describe("POST /api/feedback", () => {
         chatId: "chat-1",
         tags: ["Friendly", "On time"],
         note: "  Lovely sourdough  ",
+        stars: 8,
       }),
     );
 
@@ -200,8 +232,31 @@ describe("POST /api/feedback", () => {
         listing_id: null,
         tags: ["Friendly", "On time"],
         note: "Lovely sourdough",
+        stars: 8,
       }),
     );
+  });
+
+  it("rejects a star rating above 10", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+
+    const response = await POST(
+      makeRequest({ chatId: "chat-1", tags: ["Friendly"], stars: 11 }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it("rejects a non-integer star rating", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+
+    const response = await POST(
+      makeRequest({ chatId: "chat-1", tags: ["Friendly"], stars: 3.5 }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(from).not.toHaveBeenCalled();
   });
 
   it("writes feedback from a listing, addressed to the owner", async () => {
@@ -213,7 +268,7 @@ describe("POST /api/feedback", () => {
     insertSingle.mockResolvedValue({ data: { id: "fb-2" }, error: null });
 
     const response = await POST(
-      makeRequest({ listingId: "listing-1", tags: ["Helpful"] }),
+      makeRequest({ listingId: "listing-1", tags: ["Helpful"], stars: 5 }),
     );
 
     expect(response.status).toBe(201);
@@ -225,6 +280,7 @@ describe("POST /api/feedback", () => {
         chat_id: null,
         tags: ["Helpful"],
         note: null,
+        stars: 5,
       }),
     );
   });
@@ -241,7 +297,7 @@ describe("POST /api/feedback", () => {
     });
 
     const response = await POST(
-      makeRequest({ chatId: "chat-1", tags: ["Friendly"] }),
+      makeRequest({ chatId: "chat-1", tags: ["Friendly"], stars: 7 }),
     );
 
     expect(response.status).toBe(409);

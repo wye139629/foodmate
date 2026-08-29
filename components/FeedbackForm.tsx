@@ -2,14 +2,20 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check } from "lucide-react";
+import { Check, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   FEEDBACK_TAGS,
   MAX_FEEDBACK_NOTE_LENGTH,
+  MAX_FEEDBACK_STARS,
   MAX_FEEDBACK_TAGS,
 } from "@/lib/feedback-tags";
+
+const STAR_ROWS = [
+  [1, 2, 3, 4, 5],
+  [6, 7, 8, 9, 10],
+];
 
 interface FeedbackFormProps {
   chatId?: string;
@@ -27,6 +33,7 @@ export default function FeedbackForm({
   const router = useRouter();
   const [selected, setSelected] = useState<string[]>([]);
   const [note, setNote] = useState("");
+  const [stars, setStars] = useState(0);
   const [status, setStatus] = useState<"idle" | "sending" | "sent">(
     alreadySent ? "sent" : "idle",
   );
@@ -43,8 +50,10 @@ export default function FeedbackForm({
     });
   }
 
+  const canSend = stars > 0;
+
   async function handleSubmit() {
-    if (selected.length === 0 || status === "sending") return;
+    if (!canSend || status === "sending") return;
     setStatus("sending");
     setError(null);
 
@@ -56,6 +65,7 @@ export default function FeedbackForm({
         listingId,
         tags: selected,
         note: note.trim() || undefined,
+        stars,
       }),
     });
 
@@ -100,11 +110,11 @@ export default function FeedbackForm({
 
   return (
     <div className="flex flex-1 flex-col">
-      <h1 className="font-heading text-[32px] leading-[1.15] font-bold">
+      <h1 className="font-heading text-2xl leading-[1.2] font-bold">
         How did your share go?
       </h1>
       <p className="mt-2 text-sm font-medium text-muted-foreground">
-        Choose up to 3 things that stood out.
+        Choose up to 3 things that stood out (optional).
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2.5">
@@ -132,6 +142,44 @@ export default function FeedbackForm({
       </div>
 
       <div className="mt-8">
+        <p className="font-heading text-lg font-bold">
+          How many stars for {firstName}?
+        </p>
+        <p className="mt-1 text-sm font-medium text-muted-foreground">
+          Tap a star.
+        </p>
+        <div className="mt-3 flex flex-col gap-2">
+          {STAR_ROWS.map((row, rowIndex) => (
+            <div key={rowIndex} className="flex gap-2">
+              {row.map((value) => {
+                const filled = value <= stars;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-label={`${value} of ${MAX_FEEDBACK_STARS} stars`}
+                    aria-pressed={filled}
+                    onClick={() => setStars(stars === value ? 0 : value)}
+                    className="rounded-md p-1 transition-transform active:scale-95"
+                  >
+                    <Star
+                      className={cn(
+                        "size-8",
+                        filled
+                          ? "fill-accent text-accent"
+                          : "fill-transparent text-border",
+                      )}
+                      strokeWidth={2}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-8">
         <label htmlFor="feedback-note" className="font-heading text-lg font-bold">
           Anything you&apos;d like to say?
         </label>
@@ -156,7 +204,7 @@ export default function FeedbackForm({
         <Button
           type="button"
           onClick={handleSubmit}
-          disabled={selected.length === 0 || status === "sending"}
+          disabled={!canSend || status === "sending"}
           className="h-14 w-full text-base font-semibold"
         >
           {status === "sending" ? "Sending…" : "Send feedback"}

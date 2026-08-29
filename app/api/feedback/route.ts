@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase-auth";
 import {
   MAX_FEEDBACK_NOTE_LENGTH,
+  MAX_FEEDBACK_STARS,
   MAX_FEEDBACK_TAGS,
+  isFeedbackStars,
   isFeedbackTag,
 } from "@/lib/feedback-tags";
 
@@ -11,6 +13,7 @@ interface CreateFeedbackBody {
   listingId?: unknown;
   tags?: unknown;
   note?: unknown;
+  stars?: unknown;
 }
 
 export async function POST(request: Request) {
@@ -37,22 +40,21 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!Array.isArray(body.tags) || body.tags.length === 0) {
-    return NextResponse.json(
-      { error: "Pick at least one thing that stood out" },
-      { status: 400 },
-    );
+  // Tags are optional - a feedback row can be just a star rating.
+  const rawTags = body.tags == null ? [] : body.tags;
+  if (!Array.isArray(rawTags)) {
+    return NextResponse.json({ error: "tags must be an array" }, { status: 400 });
   }
 
-  if (body.tags.length > MAX_FEEDBACK_TAGS) {
+  if (rawTags.length > MAX_FEEDBACK_TAGS) {
     return NextResponse.json(
       { error: `Pick up to ${MAX_FEEDBACK_TAGS} things` },
       { status: 400 },
     );
   }
 
-  const uniqueTags = [...new Set(body.tags)];
-  if (uniqueTags.length !== body.tags.length || !uniqueTags.every(isFeedbackTag)) {
+  const uniqueTags = [...new Set(rawTags)];
+  if (uniqueTags.length !== rawTags.length || !uniqueTags.every(isFeedbackTag)) {
     return NextResponse.json({ error: "Invalid feedback tag" }, { status: 400 });
   }
 
@@ -70,6 +72,14 @@ export async function POST(request: Request) {
     }
     note = trimmed || null;
   }
+
+  if (!isFeedbackStars(body.stars) || body.stars < 1) {
+    return NextResponse.json(
+      { error: `Pick a star rating from 1 to ${MAX_FEEDBACK_STARS}` },
+      { status: 400 },
+    );
+  }
+  const stars = body.stars;
 
   let toUserId: string;
 
@@ -124,6 +134,7 @@ export async function POST(request: Request) {
       listing_id: listingId ?? null,
       tags: uniqueTags,
       note,
+      stars,
     })
     .select()
     .single();
