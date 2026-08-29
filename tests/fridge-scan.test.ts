@@ -50,6 +50,42 @@ describe("POST /api/listings/scan", () => {
     expect(parse).not.toHaveBeenCalled();
   });
 
+  it("rejects an unsupported photo format", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+
+    const formData = new FormData();
+    formData.append(
+      "photo",
+      new File([new Uint8Array([1, 2, 3])], "fridge.heic", {
+        type: "image/heic",
+      }),
+    );
+
+    const response = await POST(makeRequest(formData));
+
+    expect(response.status).toBe(400);
+    expect(parse).not.toHaveBeenCalled();
+  });
+
+  it("returns a clean error when Anthropic rejects the photo", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+    parse.mockRejectedValue(new Error("400 Image format image/png not supported"));
+
+    const formData = new FormData();
+    formData.append(
+      "photo",
+      new File([new Uint8Array([1, 2, 3])], "fridge.png", {
+        type: "image/png",
+      }),
+    );
+
+    const response = await POST(makeRequest(formData));
+    const body = await response.json();
+
+    expect(response.status).toBe(502);
+    expect(body.error).toMatch(/could not process/i);
+  });
+
   it("returns the parsed item list from Claude", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
     parse.mockResolvedValue({
