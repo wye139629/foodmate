@@ -105,7 +105,7 @@ export default async function BoardPage() {
                 <li key={item.id}>
                   <Link
                     href={`/listings/${item.id}`}
-                    className="flex overflow-hidden rounded-lg border-2 border-border bg-card"
+                    className="flex h-[140px] overflow-hidden rounded-lg border-2 border-border bg-card"
                   >
                     {item.photo_url ? (
                       // eslint-disable-next-line @next/next/no-img-element -- Supabase Storage URL, not a static import
@@ -117,27 +117,27 @@ export default async function BoardPage() {
                     ) : (
                       <div className="h-[140px] w-[130px] shrink-0 border-r-2 border-border bg-muted" />
                     )}
-                    <div className="flex flex-1 flex-col justify-between p-3">
-                      <div>
-                        <div className="flex items-center justify-between gap-2">
-                          <p className="font-heading text-base">{item.name}</p>
-                          {item.recommend_score !== null && (
-                            <span className="shrink-0 rounded-full border border-border bg-secondary px-2 py-0.5 text-xs font-bold text-secondary-foreground">
-                              ⭐ {item.recommend_score}/10
-                            </span>
-                          )}
-                        </div>
+                    <div className="flex min-w-0 flex-1 flex-col justify-between p-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-heading text-base">{item.name}</p>
                         {item.description && (
                           <p className="mt-1 line-clamp-2 text-sm font-medium">
                             {item.description}
                           </p>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 pt-2">
-                        <span className="flex size-6 items-center justify-center rounded-full border border-border bg-muted text-xs font-bold">
-                          {initialsFor(ownerName)}
-                        </span>
-                        <span className="text-sm font-bold">{ownerName}</span>
+                      <div className="flex items-center justify-between gap-2 pt-2">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className="flex size-6 shrink-0 items-center justify-center rounded-full border border-border bg-muted text-xs font-bold">
+                            {initialsFor(ownerName)}
+                          </span>
+                          <span className="truncate text-sm font-bold">{ownerName}</span>
+                        </div>
+                        {item.recommend_score !== null && (
+                          <span className="shrink-0 rounded-full border border-border bg-secondary px-2 py-0.5 text-xs font-bold text-secondary-foreground">
+                            ⭐ {item.recommend_score}/10
+                          </span>
+                        )}
                       </div>
                     </div>
                   </Link>
