@@ -27,11 +27,16 @@ export default function BottomNav({ unreadChats = 0 }: { unreadChats?: number })
             href={href}
             className={cn(
               "flex flex-1 flex-col items-center justify-center gap-1.5",
-              active && !isMap && "border-t-2 -mt-[2px] border-border bg-accent/20",
+              active && "border-t-2 -mt-[2px] border-border bg-accent/20",
             )}
           >
             {isMap ? (
-              <span className="-mt-8 flex size-14 items-center justify-center rounded-full border-2 border-border bg-card shadow-[0_1px_1.5px_rgba(0,0,0,0.1),0_1px_1px_rgba(0,0,0,0.1)]">
+              <span
+                className={cn(
+                  "-mt-8 flex size-14 items-center justify-center rounded-full border-2 border-border shadow-[0_1px_1.5px_rgba(0,0,0,0.1),0_1px_1px_rgba(0,0,0,0.1)]",
+                  active ? "bg-accent" : "bg-card",
+                )}
+              >
                 <Icon className="size-5" />
               </span>
             ) : (
