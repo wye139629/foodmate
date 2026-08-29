@@ -77,7 +77,8 @@ describe("ChatWindow realtime subscription", () => {
       },
     });
 
-    expect(await screen.findByText(/Hello there/)).toBeTruthy();
-    expect(screen.getByText(/Them:/)).toBeTruthy();
+    const bubble = await screen.findByText(/Hello there/);
+    // Received messages (not the current user's own) align left.
+    expect(bubble.closest("li")?.className).toContain("justify-start");
   });
 });
