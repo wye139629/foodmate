@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Map as MapIcon, UserRound } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase-auth";
-import SignOutButton from "@/components/SignOutButton";
 import BottomNav from "@/components/BottomNav";
 import PostRequestButton from "@/components/PostRequestButton";
 
@@ -67,9 +66,12 @@ export default async function BoardPage() {
     <main className="mx-auto flex min-h-screen w-full max-w-sm flex-col px-4 pt-12 pb-24">
       <header className="flex items-center justify-between border-b-2 border-border pb-4">
         <h1 className="font-heading text-2xl">Nearby Shares</h1>
-        <SignOutButton className="size-6 rounded-full border p-0 text-xs">
+        <Link
+          href="/profile"
+          className="flex size-6 items-center justify-center rounded-full border border-border bg-muted text-xs font-medium"
+        >
           {initial}
-        </SignOutButton>
+        </Link>
       </header>
 
       <section className="mt-6 flex flex-col justify-between rounded-2xl border-2 border-border bg-accent p-6 shadow-[4px_4px_0_var(--border)]">

@@ -40,5 +40,6 @@ export const config = {
     "/chat/:path*",
     "/board/:path*",
     "/onboarding/:path*",
+    "/profile/:path*",
   ],
 };

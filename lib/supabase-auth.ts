@@ -65,6 +65,7 @@ const PROTECTED_PATH_PREFIXES = [
   "/chat",
   "/board",
   "/onboarding",
+  "/profile",
 ];
 
 export function isProtectedPath(pathname: string): boolean {

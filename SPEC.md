@@ -90,6 +90,12 @@ User logs in → creates a shareable food listing (with location) → another us
 - **Then** the same Claude call additionally scores the listing 0–10 based on how fresh the food looks in the photo and how much effort the description shows, stores the score with the listing, and shows it publicly on that listing's map marker/InfoWindow and board card so other users see it as a trust signal
 - **Note:** this is informational only — a low score never blocks publishing (unlike FR-012's hard block). No photo → no score (`recommend_score` stays null). The score is computed server-side from the already-uploaded photo, never accepted as client input, so a user can't fake their own listing's public trust score.
 
+**FR-014｜Profile page**
+- **Given** a logged-in user taps the avatar in the top-right corner of the map, board, or chat-list header
+- **When** the page loads
+- **Then** they see a profile page — their name/avatar, "Member since", counts of their own Active vs. Shared listings, a "+ Share something new" shortcut, and their own listings split into Available (tap through to the real listing detail page) and Shared sections, plus a Log out action
+- **Note:** the board page's avatar previously logged the user out directly on tap — that's moved to an explicit Log out button on this new page instead.
+
 ### P2 — Do if time allows
 
 **FR-006｜Safety notice display**

@@ -152,6 +152,19 @@
 - **Commit message**: `feat(FR-013): AI recommend score shown publicly on listings`
 - **Rollback**: `git revert <commit-hash>`
 
+## T014｜FR-014 Profile Page
+
+- **Prerequisite**: T013 complete
+- **What**:
+  - New `/app/profile/page.tsx`: name/avatar initials, "Member since" (`profiles.created_at`), Active/Shared counts of the user's own listings, "+ Share something new" (`/listings/new`), Available listings (link to `/listings/[id]`) and Shared listings sections, Log out button (existing `SignOutButton`).
+  - Repoint the avatar in `/app/map/page.tsx`, `/app/board/page.tsx`, `/app/chat/page.tsx` headers to `/profile` — board's avatar was previously the sign-out button itself (direct logout on tap); that behavior moves to the new page's explicit Log out button.
+  - Add `/profile` to `PROTECTED_PATH_PREFIXES` (`lib/supabase-auth.ts`) and the middleware matcher.
+- **File scope**: `/app/profile/page.tsx` (new), `/app/map/page.tsx` (extend), `/app/board/page.tsx` (extend), `/app/chat/page.tsx` (extend), `/lib/supabase-auth.ts` (extend), `/middleware.ts` (extend)
+- **Test command**: `pnpm test` (full suite — no dedicated test file, matching the existing convention of not unit-testing server-component pages; verified manually in a real browser instead)
+- **Acceptance mapping**: SPEC.md FR-014
+- **Commit message**: `feat(FR-014): profile page`
+- **Rollback**: `git revert <commit-hash>`
+
 ---
 
 ## P2 Tasks (only start after all P1 is done and William confirms)

@@ -64,7 +64,7 @@ export default async function ChatListPage() {
       <header className="flex items-center justify-between border-b-2 border-border pb-4">
         <h1 className="font-heading text-2xl">Chats</h1>
         <Link
-          href="/board"
+          href="/profile"
           className="flex size-9 items-center justify-center rounded-full border-2 border-border bg-muted text-sm font-bold"
         >
           {initial}

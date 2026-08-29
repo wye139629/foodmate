@@ -16,7 +16,7 @@ export default async function MapPage() {
       <header className="z-10 flex items-center justify-between border-b-2 border-border bg-card px-4 pt-3 pb-3">
         <h1 className="font-heading text-xl">Map Discovery</h1>
         <Link
-          href="/board"
+          href="/profile"
           className="flex size-6 items-center justify-center rounded-full border-2 border-border bg-muted text-xs font-medium"
         >
           {initial}
