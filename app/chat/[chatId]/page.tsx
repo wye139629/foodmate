@@ -52,7 +52,11 @@ export default async function ChatPage({
       <header className="flex shrink-0 items-center gap-3 border-b border-border/40 bg-background px-4 py-3">
         <BackButton />
         <h1 className="min-w-0 flex-1 truncate text-lg font-semibold">
-          {otherName}
+          {otherUserId ? (
+            <Link href={`/users/${otherUserId}`}>{otherName}</Link>
+          ) : (
+            otherName
+          )}
         </h1>
         <Link
           href={`/feedback?chatId=${chatId}`}

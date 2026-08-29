@@ -68,6 +68,7 @@ const PROTECTED_PATH_PREFIXES = [
   "/onboarding",
   "/profile",
   "/admin",
+  "/users",
 ];
 
 export function isProtectedPath(pathname: string): boolean {

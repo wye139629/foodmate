@@ -111,7 +111,10 @@ export default async function ListingDetailPage({
           )}
         </div>
 
-        <div className="rounded-2xl border-2 border-border bg-card p-5 shadow-[4px_4px_0_var(--border)]">
+        <Link
+          href={`/users/${listing.owner_id}`}
+          className="block rounded-2xl border-2 border-border bg-card p-5 shadow-[4px_4px_0_var(--border)]"
+        >
           <div className="flex items-center gap-4">
             <span className="flex size-14 items-center justify-center rounded-full border-2 border-border bg-primary/20 font-heading text-lg font-bold">
               {initialsFor(sharerName)}
@@ -129,7 +132,7 @@ export default async function ListingDetailPage({
               )}
             </div>
           </div>
-        </div>
+        </Link>
       </div>
 
       <div className="fixed right-0 bottom-0 left-0 z-20 bg-gradient-to-t from-background via-background to-transparent p-5">
