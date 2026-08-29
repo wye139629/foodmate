@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { DM_Mono, Outfit } from "next/font/google";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import MapKeepAlive from "@/components/MapKeepAlive";
+import SplashScreen from "@/components/SplashScreen";
 import "./globals.css";
 
 const bodyFont = Outfit({
@@ -73,6 +74,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <ServiceWorkerRegister />
         {children}
         <MapKeepAlive />
+        <SplashScreen />
       </body>
     </html>
   );
