@@ -6,6 +6,7 @@ import SignOutButton from "@/components/SignOutButton";
 import BottomNav from "@/components/BottomNav";
 import ListingStatusToggle from "@/components/ListingStatusToggle";
 import RatingBadge from "@/components/RatingBadge";
+import VerifiedBadge from "@/components/VerifiedBadge";
 
 function initialsFor(name: string) {
   return name.slice(0, 2).toUpperCase();
@@ -28,7 +29,7 @@ export default async function ProfilePage() {
     user
       ? supabase
           .from("profiles")
-          .select("display_name, created_at, rating")
+          .select("display_name, created_at, rating, verification_status")
           .eq("id", user.id)
           .single()
       : Promise.resolve({ data: null }),
@@ -62,6 +63,7 @@ export default async function ProfilePage() {
             <div className="flex flex-wrap items-center gap-2">
               <p className="font-heading text-base font-bold">{displayName}</p>
               <RatingBadge rating={profile?.rating} />
+              <VerifiedBadge status={profile?.verification_status} />
             </div>
             {profile?.created_at && (
               <p className="text-sm font-medium text-muted-foreground">

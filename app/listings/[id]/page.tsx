@@ -4,6 +4,7 @@ import { createServerSupabaseClient } from "@/lib/supabase-auth";
 import { isListingExpired } from "@/lib/listing-status";
 import BackButton from "@/components/BackButton";
 import RatingBadge from "@/components/RatingBadge";
+import VerifiedBadge from "@/components/VerifiedBadge";
 import { Button } from "@/components/ui/button";
 
 function initialsFor(name: string) {
@@ -52,7 +53,7 @@ export default async function ListingDetailPage({
 
   const { data: sharer } = await supabase
     .from("profiles")
-    .select("display_name, created_at, rating")
+    .select("display_name, created_at, rating, verification_status")
     .eq("id", listing.owner_id)
     .single();
 
@@ -119,6 +120,7 @@ export default async function ListingDetailPage({
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="font-heading text-lg font-bold">{sharerName}</h3>
                 <RatingBadge rating={sharer?.rating} size="lg" />
+                <VerifiedBadge status={sharer?.verification_status} size="lg" />
               </div>
               {sharer?.created_at && (
                 <p className="text-sm font-medium text-muted-foreground">

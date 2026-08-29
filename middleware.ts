@@ -54,5 +54,6 @@ export const config = {
     "/feedback/:path*",
     "/onboarding/:path*",
     "/profile/:path*",
+    "/admin/:path*",
   ],
 };

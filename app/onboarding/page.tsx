@@ -3,8 +3,6 @@
 import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase-auth";
 import { cn } from "@/lib/utils";
 
@@ -159,7 +157,7 @@ function IconEye() {
   );
 }
 
-function IconGift() {
+function IconShield() {
   return (
     <svg
       width="20"
@@ -172,10 +170,8 @@ function IconGift() {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <rect x="3" y="8" width="18" height="13" rx="1" />
-      <path d="M12 8v13" />
-      <path d="M3 12h18" />
-      <path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5" />
+      <path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5z" />
+      <path d="M9 12l2 2 4-4" />
     </svg>
   );
 }
@@ -295,7 +291,10 @@ function OnboardingContent() {
   const [specialtyDraft, setSpecialtyDraft] = useState("");
   const [curiosity, setCuriosity] = useState<string[]>([]);
   const [curiosityDraft, setCuriosityDraft] = useState("");
-  const [share, setShare] = useState("");
+  const [idPhoto, setIdPhoto] = useState<File | null>(null);
+  const [idPhotoPreview, setIdPhotoPreview] = useState<string | null>(null);
+  const [idSubmitted, setIdSubmitted] = useState(false);
+  const [uploadingId, setUploadingId] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const advanceTimer = useRef<number | null>(null);
@@ -387,6 +386,55 @@ function OnboardingContent() {
     }, 400);
   }
 
+  function handleIdPhotoChange(file: File | null) {
+    setIdPhoto(file);
+    setIdPhotoPreview((previous) => {
+      if (previous) URL.revokeObjectURL(previous);
+      return file ? URL.createObjectURL(file) : null;
+    });
+  }
+
+  async function handleIdStepNext() {
+    if (!idPhoto) {
+      handleNext();
+      return;
+    }
+
+    setError(null);
+    setUploadingId(true);
+
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not signed in");
+
+      const ext = idPhoto.name.split(".").pop() || "jpg";
+      const path = `${user.id}/id-card.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("student-ids")
+        .upload(path, idPhoto, { upsert: true });
+      if (uploadError) throw uploadError;
+
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ verification_status: "pending", verification_photo_path: path })
+        .eq("id", user.id);
+      if (profileError) throw profileError;
+
+      setIdSubmitted(true);
+      handleNext();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Could not upload your ID — try again",
+      );
+    } finally {
+      setUploadingId(false);
+    }
+  }
+
   async function handleEnter() {
     setError(null);
     setLoading(true);
@@ -401,7 +449,6 @@ function OnboardingContent() {
             home,
             specialties,
             curious: curiosity,
-            sharing: share.trim(),
           },
         },
       });
@@ -599,37 +646,63 @@ function OnboardingContent() {
         ) : step === 4 ? (
           <div className="flex flex-1 flex-col">
             <h1 className="font-heading text-[24px] leading-[1.2] font-bold text-foreground">
-              Put Something on the Table
+              Verify Your Student ID
             </h1>
             <p className="font-sans mt-2 mb-6 text-[15px] leading-[1.5] font-medium text-foreground/70">
-              What are you happy to share right now?
+              Upload a photo of your student ID so we can confirm you&apos;re
+              a student. It&apos;s reviewed by hand, never blocks you from
+              using FoodMate, and you can do this later from your profile.
             </p>
 
-            <div className="rounded-lg border border-[#8A8A8A] bg-card p-4">
-              <Label
-                htmlFor="share-now"
-                className="font-heading mb-2 block text-[13px] leading-[1.4] font-medium tracking-wide uppercase"
-              >
-                Adding to table
-              </Label>
-              <Input
-                id="share-now"
-                type="text"
-                value={share}
-                onChange={(event) => setShare(event.target.value)}
-                placeholder="Extra portions of weekend baking"
-                className="h-11 rounded-lg border border-[#8A8A8A] bg-background text-[15px] focus-visible:ring-3 focus-visible:ring-[#8A8A8A]"
-                autoFocus
+            <label
+              htmlFor="id-photo"
+              className="mx-auto flex aspect-[4/3] w-full max-w-[320px] cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden rounded-lg border border-dashed border-[#8A8A8A] bg-card text-center"
+            >
+              {idPhotoPreview ? (
+                // eslint-disable-next-line @next/next/no-img-element -- local object URL preview, not a static import
+                <img
+                  src={idPhotoPreview}
+                  alt=""
+                  className="size-full object-cover"
+                />
+              ) : (
+                <>
+                  <IconShield />
+                  <span className="px-4 text-[14px] font-semibold">
+                    Tap to add a photo of your student ID
+                  </span>
+                </>
+              )}
+              <input
+                id="id-photo"
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={(event) =>
+                  handleIdPhotoChange(event.target.files?.[0] ?? null)
+                }
               />
-            </div>
+            </label>
 
-            <div className="mt-auto pt-6">
+            {error && (
+              <p role="alert" className="pt-4 text-[14px] text-destructive">
+                {error}
+              </p>
+            )}
+
+            <div className="mt-auto flex flex-col gap-2 pt-6">
               <Button
                 type="button"
-                onClick={handleNext}
+                onClick={handleIdStepNext}
+                disabled={uploadingId}
                 className="h-11 w-full text-[15px] font-semibold"
               >
-                Complete Profile
+                {uploadingId
+                  ? "Uploading…"
+                  : idPhoto
+                    ? "Submit for review"
+                    : "Skip for now"}
               </Button>
             </div>
           </div>
@@ -675,14 +748,16 @@ function OnboardingContent() {
 
               <div className="flex items-start gap-4 border-t border-border bg-accent/50 px-5 py-4">
                 <div className="mt-0.5 text-foreground">
-                  <IconGift />
+                  <IconShield />
                 </div>
                 <div>
                   <div className="font-heading mb-0.5 text-[12px] leading-[1.4] font-bold tracking-widest text-foreground/60 uppercase">
-                    Sharing Now
+                    Verification
                   </div>
                   <div className="font-sans text-[15px] leading-[1.5] font-semibold">
-                    {share.trim() || "Nothing listed yet"}
+                    {idSubmitted
+                      ? "Student ID submitted — pending review"
+                      : "Not verified yet"}
                   </div>
                 </div>
               </div>
