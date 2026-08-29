@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 
 type PostgresChangesCallback = (payload: {
   new: { id: string; sender_id: string; content: string; created_at: string };
@@ -26,12 +26,13 @@ const channel = vi.fn((name: string) => {
   capturedChannelName = name;
   return { on };
 });
+const setAuth = vi.fn(() => Promise.resolve());
 
 vi.mock("@/lib/supabase-auth", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/supabase-auth")>();
   return {
     ...actual,
-    createClient: () => ({ channel, removeChannel }),
+    createClient: () => ({ channel, removeChannel, realtime: { setAuth } }),
   };
 });
 
@@ -47,7 +48,8 @@ describe("ChatWindow realtime subscription", () => {
       }),
     );
 
-    expect(capturedChannelName).toBe("chat-chat-1");
+    await waitFor(() => expect(setAuth).toHaveBeenCalled());
+    await waitFor(() => expect(capturedChannelName).toBe("chat-chat-1"));
     expect(capturedConfig).toMatchObject({
       event: "INSERT",
       schema: "public",
@@ -65,7 +67,7 @@ describe("ChatWindow realtime subscription", () => {
       }),
     );
 
-    expect(capturedCallback).not.toBeNull();
+    await waitFor(() => expect(capturedCallback).not.toBeNull());
     capturedCallback!({
       new: {
         id: "m1",

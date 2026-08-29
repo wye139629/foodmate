@@ -27,24 +27,35 @@ export default function ChatWindow({
 
   useEffect(() => {
     const supabase = createClient();
-    const channel = supabase
-      .channel(`chat-${chatId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "messages",
-          filter: `chat_id=eq.${chatId}`,
-        },
-        (payload: { new: Message }) => {
-          setMessages((current) => [...current, payload.new]);
-        },
-      )
-      .subscribe();
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
+
+    // The realtime socket needs the current session's JWT explicitly -
+    // @supabase/ssr's cookie-based session isn't picked up by the realtime
+    // client automatically, so subscribing without this silently receives
+    // no events (RLS evaluates the connection as anonymous).
+    supabase.realtime.setAuth().then(() => {
+      if (cancelled) return;
+      channel = supabase
+        .channel(`chat-${chatId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "messages",
+            filter: `chat_id=eq.${chatId}`,
+          },
+          (payload: { new: Message }) => {
+            setMessages((current) => [...current, payload.new]);
+          },
+        )
+        .subscribe();
+    });
 
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      if (channel) supabase.removeChannel(channel);
     };
   }, [chatId]);
 
