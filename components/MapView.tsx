@@ -84,6 +84,7 @@ function waitForMapsApi(): Promise<void> {
         key: MAPS_API_KEY,
         libraries: "marker",
         callback: MAPS_CALLBACK,
+        loading: "async",
       });
       script.src = `https://maps.googleapis.com/maps/api/js?${params}`;
       script.async = true;
