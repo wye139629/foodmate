@@ -6,8 +6,9 @@ import {
 
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next();
+  const { pathname } = request.nextUrl;
 
-  if (!isProtectedPath(request.nextUrl.pathname)) {
+  if (!isProtectedPath(pathname)) {
     return response;
   }
 
@@ -18,13 +19,26 @@ export async function middleware(request: NextRequest) {
 
   if (!user) {
     const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("redirectedFrom", request.nextUrl.pathname);
+    loginUrl.searchParams.set("redirectedFrom", pathname);
     return NextResponse.redirect(loginUrl);
+  }
+
+  const onboarded = user.user_metadata?.onboarded === true;
+  if (!onboarded && pathname !== "/onboarding") {
+    const onboardingUrl = new URL("/onboarding", request.url);
+    onboardingUrl.searchParams.set("redirectedFrom", pathname);
+    return NextResponse.redirect(onboardingUrl);
   }
 
   return response;
 }
 
 export const config = {
-  matcher: ["/map/:path*", "/listings/:path*", "/chat/:path*", "/board/:path*"],
+  matcher: [
+    "/map/:path*",
+    "/listings/:path*",
+    "/chat/:path*",
+    "/board/:path*",
+    "/onboarding/:path*",
+  ],
 };

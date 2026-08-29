@@ -31,8 +31,10 @@ describe("auth middleware", () => {
     expect(response.headers.get("location")).toContain("/login");
   });
 
-  it("lets a logged-in user through to a protected route", async () => {
-    getUser.mockResolvedValue({ data: { user: { id: "user-1" } } });
+  it("lets a logged-in, onboarded user through to a protected route", async () => {
+    getUser.mockResolvedValue({
+      data: { user: { id: "user-1", user_metadata: { onboarded: true } } },
+    });
 
     const response = await middleware(makeRequest("/listings/new"));
 
