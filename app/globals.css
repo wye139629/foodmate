@@ -126,6 +126,49 @@
   display: none;
 }
 
+/* Running-toast loading mascot (components/ToastRunner.tsx) */
+@keyframes toast-runner-bob {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-10px) rotate(2deg); }
+}
+@keyframes toast-runner-leg-a {
+  0%, 100% { transform: rotate(-24deg); }
+  50% { transform: rotate(24deg); }
+}
+@keyframes toast-runner-leg-b {
+  0%, 100% { transform: rotate(24deg); }
+  50% { transform: rotate(-24deg); }
+}
+@keyframes toast-runner-arm-a {
+  0%, 100% { transform: rotate(20deg); }
+  50% { transform: rotate(-20deg); }
+}
+@keyframes toast-runner-arm-b {
+  0%, 100% { transform: rotate(-20deg); }
+  50% { transform: rotate(20deg); }
+}
+@keyframes toast-runner-trail {
+  0% { opacity: 0; transform: translateX(8px); }
+  40% { opacity: 1; transform: translateX(-2px); }
+  100% { opacity: 0; transform: translateX(-16px); }
+}
+.toast-runner-bob { animation: toast-runner-bob 0.6s ease-in-out infinite; }
+.toast-runner-leg-a { animation: toast-runner-leg-a 0.6s ease-in-out infinite; }
+.toast-runner-leg-b { animation: toast-runner-leg-b 0.6s ease-in-out infinite; }
+.toast-runner-arm-a { animation: toast-runner-arm-a 0.6s ease-in-out infinite; }
+.toast-runner-arm-b { animation: toast-runner-arm-b 0.6s ease-in-out infinite; }
+.toast-runner-trail { animation: toast-runner-trail 0.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .toast-runner-bob,
+  .toast-runner-leg-a,
+  .toast-runner-leg-b,
+  .toast-runner-arm-a,
+  .toast-runner-arm-b,
+  .toast-runner-trail {
+    animation: none;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
