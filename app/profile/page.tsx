@@ -102,7 +102,7 @@ export default async function ProfilePage() {
           <p className="mb-2 px-1 font-heading text-xs font-bold tracking-widest text-muted-foreground uppercase">
             Available
           </p>
-          <div className="-mx-4 border-t border-border bg-card">
+          <div className="border-t border-border bg-card">
             {available.map((listing) => (
               <div
                 key={listing.id}
@@ -163,7 +163,7 @@ export default async function ProfilePage() {
           <p className="mb-2 px-1 font-heading text-xs font-bold tracking-widest text-muted-foreground uppercase">
             Shared
           </p>
-          <div className="-mx-4 border-t border-border bg-muted/30">
+          <div className="border-t border-border bg-muted/30">
             {shared.map((listing) => (
               <div
                 key={listing.id}
