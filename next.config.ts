@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
     ],
   },
   async redirects() {
-    return [{ source: "/", destination: "/board", permanent: false }];
+    return [{ source: "/", destination: "/map", permanent: false }];
   },
 };
 
