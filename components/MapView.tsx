@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { LISTING_CATEGORIES, type ListingCategory } from "@/lib/listing-categories";
 import { timeAgo } from "@/lib/time-ago";
 import { loadGoogleMaps } from "@/lib/google-maps-loader";
+import { haversineDistanceKm } from "@/lib/geo-distance";
 
 interface Listing {
   id: string;
@@ -70,18 +71,27 @@ function createUserLocationDot(): HTMLDivElement {
   return wrap;
 }
 
+// Listings within this radius of each other render as one stacked marker.
+// Exact-coordinate matching used to miss near-duplicates (e.g. two listings
+// posted ~10m apart look identical at normal map zoom but weren't grouped,
+// so neither got a count badge even though they visually overlapped).
+const CLUSTER_RADIUS_KM = 0.02;
+
 function groupByCoordinate(listings: Listing[]): Listing[][] {
-  const groups = new Map<string, Listing[]>();
+  const groups: Listing[][] = [];
   for (const listing of listings) {
-    const key = `${listing.lat},${listing.lng}`;
-    const group = groups.get(key);
-    if (group) {
-      group.push(listing);
+    const nearby = groups.find(
+      (group) =>
+        haversineDistanceKm(group[0].lat, group[0].lng, listing.lat, listing.lng) <=
+        CLUSTER_RADIUS_KM,
+    );
+    if (nearby) {
+      nearby.push(listing);
     } else {
-      groups.set(key, [listing]);
+      groups.push([listing]);
     }
   }
-  return Array.from(groups.values());
+  return groups;
 }
 
 export default function MapView({
