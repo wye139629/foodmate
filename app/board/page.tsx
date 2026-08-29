@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Map as MapIcon, UserRound } from "lucide-react";
+import { Map as MapIcon } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase-auth";
 import { listingActiveCutoffIso } from "@/lib/listing-status";
 import BottomNav from "@/components/BottomNav";
@@ -7,13 +7,6 @@ import YourShares from "@/components/YourShares";
 
 function initialsFor(name: string) {
   return name.slice(0, 2).toUpperCase();
-}
-
-// ponytail: no completed_at column exists yet, so "this week" uses
-// created_at as a proxy — swap for a real completion timestamp if the
-// gap between "listed" and "completed" ever matters for this stat.
-function getWeekAgoIso(): string {
-  return new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
 }
 
 async function getDisplayNames(
@@ -41,7 +34,6 @@ export default async function BoardPage() {
   const email = user?.email ?? "Guest";
   const initial = email.charAt(0).toUpperCase();
 
-  const weekAgo = getWeekAgoIso();
   const activeCutoff = listingActiveCutoffIso();
 
   // "Just Shared" is what *other* neighbours are offering - the viewer's own
@@ -54,23 +46,17 @@ export default async function BoardPage() {
     .limit(5);
   if (user) justSharedQuery = justSharedQuery.neq("owner_id", user.id);
 
-  const [{ data: justShared }, { data: yourShares }, { count: weeklyShareCount }] =
-    await Promise.all([
-      justSharedQuery,
-      user
-        ? supabase
-            .from("listings")
-            .select("id, name, photo_url, status, created_at")
-            .eq("owner_id", user.id)
-            .gte("created_at", activeCutoff)
-            .order("created_at", { ascending: false })
-        : Promise.resolve({ data: [] as never[] }),
-      supabase
-        .from("listings")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "complete")
-        .gte("created_at", weekAgo),
-    ]);
+  const [{ data: justShared }, { data: yourShares }] = await Promise.all([
+    justSharedQuery,
+    user
+      ? supabase
+          .from("listings")
+          .select("id, name, photo_url, status, created_at")
+          .eq("owner_id", user.id)
+          .gte("created_at", activeCutoff)
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] as never[] }),
+  ]);
 
   const names = await getDisplayNames(
     supabase,
@@ -89,47 +75,8 @@ export default async function BoardPage() {
         </Link>
       </header>
 
-      <section className="relative mt-6 flex flex-col justify-between overflow-hidden rounded-2xl border-2 border-border bg-muted p-6 shadow-[4px_4px_0_var(--border)]">
-        <svg
-          viewBox="0 0 120 120"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="pointer-events-none absolute -right-8 -bottom-12 size-56 -rotate-12 text-border opacity-[0.08]"
-        >
-          <ellipse cx="60" cy="50" rx="40" ry="12" fill="var(--muted)" />
-          <path d="M 20 50 C 20 95, 100 95, 100 50" />
-          <path d="M 20 65 C 5 65, 5 50, 20 50" />
-          <path d="M 100 65 C 115 65, 115 50, 100 50" />
-          <path d="M 30 75 C 45 85, 75 85, 90 75" strokeWidth="1.5" strokeDasharray="4 4" />
-          <path d="M 45 30 C 42 20, 50 12, 48 4" />
-          <path d="M 60 30 C 57 18, 65 10, 63 2" />
-          <path d="M 75 30 C 72 20, 80 12, 78 4" />
-        </svg>
-
-        <div className="relative z-10 flex items-center justify-between">
-          <div className="flex -space-x-2">
-            <span className="flex size-12 items-center justify-center rounded-full border-2 border-border bg-card shadow-[2px_2px_0_var(--border)]">
-              <UserRound className="size-5" />
-            </span>
-            <span className="flex size-12 items-center justify-center rounded-full border-2 border-border bg-secondary shadow-[2px_2px_0_var(--border)]">
-              <UserRound className="size-5" />
-            </span>
-          </div>
-          <span className="-rotate-3 rounded-full border-2 border-border bg-card px-3 py-1.5 font-heading text-xs tracking-wide uppercase shadow-[2px_2px_0_var(--border)]">
-            This Week
-          </span>
-        </div>
-        <div className="relative z-10 mt-8">
-          <p className="font-heading text-6xl tracking-tight">{weeklyShareCount ?? 0}</p>
-          <p className="mt-3 text-lg font-bold">Neighbors met and shared food locally.</p>
-        </div>
-      </section>
-
       {yourShares && yourShares.length > 0 && (
-        <section className="mt-8">
+        <section className="mt-6">
           <div className="flex items-center justify-between border-b-2 border-border pb-2">
             <h2 className="font-heading text-sm tracking-wide uppercase">
               Your Shares
@@ -139,7 +86,7 @@ export default async function BoardPage() {
         </section>
       )}
 
-      <section className="mt-8">
+      <section className="mt-6">
         <div className="flex items-center justify-between border-b-2 border-border pb-2">
           <h2 className="font-heading text-sm tracking-wide uppercase">Just Shared</h2>
           <Link
