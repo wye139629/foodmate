@@ -7,6 +7,7 @@ function NewChatContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const otherUserId = searchParams.get("ownerId");
+  const listingId = searchParams.get("listingId");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -15,7 +16,7 @@ function NewChatContent() {
     fetch("/api/chat/open", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ otherUserId }),
+      body: JSON.stringify({ otherUserId, listingId: listingId ?? undefined }),
     })
       .then(async (response) => {
         if (!response.ok) {
@@ -30,7 +31,7 @@ function NewChatContent() {
       .catch((err) => {
         setError(err instanceof Error ? err.message : "Something went wrong");
       });
-  }, [otherUserId, router]);
+  }, [otherUserId, listingId, router]);
 
   return (
     <main>

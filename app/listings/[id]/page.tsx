@@ -119,7 +119,9 @@ export default async function ListingDetailPage({
             </p>
           ) : (
             <Button asChild className="h-14 w-full text-base">
-              <Link href={`/chat/new?ownerId=${listing.owner_id}`}>
+              <Link
+                href={`/chat/new?ownerId=${listing.owner_id}&listingId=${listing.id}`}
+              >
                 Chat with {sharerName.split(" ")[0]}
               </Link>
             </Button>

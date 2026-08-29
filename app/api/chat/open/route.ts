@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from "@/lib/supabase-auth";
 
 interface OpenChatBody {
   otherUserId?: string;
+  listingId?: string;
 }
 
 export async function POST(request: Request) {
@@ -15,7 +16,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  const { otherUserId } = (await request.json()) as OpenChatBody;
+  const { otherUserId, listingId } = (await request.json()) as OpenChatBody;
 
   if (!otherUserId) {
     return NextResponse.json(
@@ -45,12 +46,23 @@ export async function POST(request: Request) {
   }
 
   if (existing) {
+    // Backfill listing context onto an older chat that started without it
+    // (e.g. before this field existed) rather than losing it.
+    if (!existing.listing_id && listingId) {
+      const { data: updated } = await supabase
+        .from("chats")
+        .update({ listing_id: listingId })
+        .eq("id", existing.id)
+        .select()
+        .single();
+      return NextResponse.json({ chat: updated ?? existing });
+    }
     return NextResponse.json({ chat: existing });
   }
 
   const { data: created, error: createError } = await supabase
     .from("chats")
-    .insert({ user_id_1: user.id, user_id_2: otherUserId })
+    .insert({ user_id_1: user.id, user_id_2: otherUserId, listing_id: listingId ?? null })
     .select()
     .single();
 

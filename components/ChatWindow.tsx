@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { ArrowUp } from "lucide-react";
 import { createClient } from "@/lib/supabase-auth";
 import { timeAgo } from "@/lib/time-ago";
 import { cn } from "@/lib/utils";
@@ -106,16 +105,16 @@ export default function ChatWindow({
                 >
                   <div
                     className={cn(
-                      "max-w-[75%] rounded-2xl border-2 border-border px-4 py-2 text-sm font-medium shadow-[2px_2px_0_var(--border)]",
+                      "max-w-[75%] rounded-lg border px-4 py-2 text-sm",
                       isOwn
-                        ? "rounded-br-sm bg-accent text-accent-foreground"
-                        : "rounded-bl-sm bg-card",
+                        ? "rounded-br-sm border-transparent bg-accent text-accent-foreground"
+                        : "rounded-bl-sm border-border bg-card",
                     )}
                   >
                     <p>{message.content}</p>
                     <p
                       className={cn(
-                        "mt-1 text-[11px] font-normal",
+                        "mt-1 text-[12px]",
                         isOwn
                           ? "text-accent-foreground/70"
                           : "text-muted-foreground",
@@ -140,20 +139,20 @@ export default function ChatWindow({
 
       <form
         onSubmit={handleSend}
-        className="flex shrink-0 items-center gap-2 border-t-2 border-border bg-card p-3"
+        className="flex shrink-0 items-center gap-2 border-t border-border bg-background p-3"
       >
         <input
           value={content}
           onChange={(event) => setContent(event.target.value)}
-          placeholder="Type a message"
-          className="flex-1 rounded-full border-2 border-border bg-background px-4 py-2.5 text-sm font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          placeholder="Type a message…"
+          className="h-11 flex-1 rounded-lg border border-border bg-card px-3.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
         />
         <button
           type="submit"
           disabled={!content.trim()}
-          className="flex size-11 shrink-0 items-center justify-center rounded-full border-2 border-border bg-primary text-primary-foreground shadow-[2px_2px_0_var(--border)] disabled:opacity-50"
+          className="h-11 shrink-0 rounded-lg border border-border bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-50"
         >
-          <ArrowUp className="size-5" />
+          Send
         </button>
       </form>
     </div>
