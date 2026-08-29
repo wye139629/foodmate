@@ -449,7 +449,7 @@ export default function MapView({
           className={cn(
             "shrink-0 rounded-full border-2 border-border px-4 py-2 text-sm font-bold",
             category === null
-              ? "bg-foreground text-background shadow-[2px_2px_0_var(--accent)]"
+              ? "bg-foreground text-background shadow-[2px_2px_0_var(--border)]"
               : "bg-card text-foreground shadow-[2px_2px_0_var(--border)]",
           )}
         >
@@ -463,7 +463,7 @@ export default function MapView({
             className={cn(
               "shrink-0 rounded-full border-2 border-border px-4 py-2 text-sm font-bold",
               category === option
-                ? "bg-foreground text-background shadow-[2px_2px_0_var(--accent)]"
+                ? "bg-foreground text-background shadow-[2px_2px_0_var(--border)]"
                 : "bg-card text-foreground shadow-[2px_2px_0_var(--border)]",
             )}
           >
